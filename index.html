@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Hsiang 的學習空間</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700&family=Space+Mono:wght@400;700&family=Noto+Sans+TC:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0b0f1a;
+      --surface: #141929;
+      --card: #1a2035;
+      --border: #2a3350;
+      --accent-math: #00c9a7;
+      --accent-game: #ff6b6b;
+      --accent-ai: #7c6ded;
+      --accent-yellow: #ffd166;
+      --text: #e8eaf2;
+      --text-dim: #7a8099;
+      --glow-math: rgba(0,201,167,0.15);
+      --glow-game: rgba(255,107,107,0.15);
+      --glow-ai: rgba(124,109,237,0.15);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Noto Sans TC', sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── 背景網格 ── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── NAV ── */
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1rem 2.5rem;
+      background: rgba(11,15,26,0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .nav-logo {
+      font-family: 'Space Mono', monospace;
+      font-size: 1.1rem;
+      color: var(--accent-math);
+      letter-spacing: 0.05em;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 2rem;
+      list-style: none;
+    }
+
+    .nav-links a {
+      color: var(--text-dim);
+      text-decoration: none;
+      font-size: 0.9rem;
+      transition: color 0.2s;
+    }
+    .nav-links a:hover { color: var(--text); }
+
+    /* ── HERO ── */
+    .hero {
+      position: relative;
+      z-index: 1;
+      text-align: center;
+      padding: 7rem 2rem 5rem;
+    }
+
+    .hero-tag {
+      display: inline-block;
+      font-family: 'Space Mono', monospace;
+      font-size: 0.78rem;
+      letter-spacing: 0.15em;
+      color: var(--accent-math);
+      border: 1px solid var(--accent-math);
+      padding: 0.3rem 0.9rem;
+      border-radius: 100px;
+      margin-bottom: 1.5rem;
+      opacity: 0;
+      animation: fadeUp 0.6s 0.1s forwards;
+    }
+
+    .hero h1 {
+      font-family: 'Noto Serif TC', serif;
+      font-size: clamp(2.4rem, 6vw, 4.2rem);
+      font-weight: 700;
+      line-height: 1.2;
+      margin-bottom: 1.2rem;
+      opacity: 0;
+      animation: fadeUp 0.7s 0.25s forwards;
+    }
+
+    .hero h1 .highlight {
+      background: linear-gradient(120deg, var(--accent-math), var(--accent-ai));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero p {
+      font-size: 1.05rem;
+      color: var(--text-dim);
+      max-width: 520px;
+      margin: 0 auto 2.5rem;
+      line-height: 1.8;
+      opacity: 0;
+      animation: fadeUp 0.7s 0.4s forwards;
+    }
+
+    /* ── CATEGORY FILTER ── */
+    .filters {
+      display: flex;
+      justify-content: center;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+      margin-bottom: 3rem;
+      position: relative;
+      z-index: 1;
+      opacity: 0;
+      animation: fadeUp 0.7s 0.55s forwards;
+    }
+
+    .filter-btn {
+      cursor: pointer;
+      border: 1px solid var(--border);
+      background: var(--card);
+      color: var(--text-dim);
+      padding: 0.45rem 1.2rem;
+      border-radius: 100px;
+      font-size: 0.85rem;
+      font-family: 'Noto Sans TC', sans-serif;
+      transition: all 0.2s;
+    }
+    .filter-btn:hover, .filter-btn.active {
+      border-color: var(--accent-math);
+      color: var(--accent-math);
+      background: var(--glow-math);
+    }
+    .filter-btn[data-cat="game"]:hover, .filter-btn[data-cat="game"].active {
+      border-color: var(--accent-game);
+      color: var(--accent-game);
+      background: var(--glow-game);
+    }
+    .filter-btn[data-cat="ai"]:hover, .filter-btn[data-cat="ai"].active {
+      border-color: var(--accent-ai);
+      color: var(--accent-ai);
+      background: var(--glow-ai);
+    }
+
+    /* ── GRID ── */
+    .grid {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 1.5rem;
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 2rem 5rem;
+    }
+
+    /* ── CARD ── */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 1.8rem;
+      cursor: pointer;
+      text-decoration: none;
+      color: inherit;
+      display: flex;
+      flex-direction: column;
+      gap: 0.8rem;
+      transition: transform 0.25s, box-shadow 0.25s, border-color 0.25s;
+      position: relative;
+      overflow: hidden;
+      opacity: 0;
+      animation: fadeUp 0.6s forwards;
+    }
+
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      border-radius: 16px 16px 0 0;
+    }
+    .card[data-cat="math"]::before { background: var(--accent-math); }
+    .card[data-cat="game"]::before { background: var(--accent-game); }
+    .card[data-cat="ai"]::before   { background: var(--accent-ai); }
+
+    .card:hover {
+      transform: translateY(-6px);
+    }
+    .card[data-cat="math"]:hover {
+      border-color: var(--accent-math);
+      box-shadow: 0 8px 40px var(--glow-math);
+    }
+    .card[data-cat="game"]:hover {
+      border-color: var(--accent-game);
+      box-shadow: 0 8px 40px var(--glow-game);
+    }
+    .card[data-cat="ai"]:hover {
+      border-color: var(--accent-ai);
+      box-shadow: 0 8px 40px var(--glow-ai);
+    }
+
+    .card-icon {
+      font-size: 2.2rem;
+      line-height: 1;
+    }
+
+    .card-tag {
+      font-family: 'Space Mono', monospace;
+      font-size: 0.7rem;
+      letter-spacing: 0.1em;
+      padding: 0.2rem 0.6rem;
+      border-radius: 6px;
+      display: inline-block;
+      width: fit-content;
+    }
+    .card[data-cat="math"] .card-tag {
+      color: var(--accent-math);
+      background: var(--glow-math);
+    }
+    .card[data-cat="game"] .card-tag {
+      color: var(--accent-game);
+      background: var(--glow-game);
+    }
+    .card[data-cat="ai"] .card-tag {
+      color: var(--accent-ai);
+      background: var(--glow-ai);
+    }
+
+    .card h3 {
+      font-size: 1.15rem;
+      font-weight: 500;
+      line-height: 1.4;
+    }
+
+    .card p {
+      font-size: 0.88rem;
+      color: var(--text-dim);
+      line-height: 1.7;
+      flex: 1;
+    }
+
+    .card-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 0.5rem;
+      font-size: 0.8rem;
+      color: var(--text-dim);
+    }
+
+    .card-status {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+    .dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--accent-math);
+    }
+    .dot.orange { background: var(--accent-yellow); }
+    .dot.dim    { background: var(--text-dim); }
+
+    .card-arrow {
+      opacity: 0;
+      transition: opacity 0.2s;
+      font-size: 1rem;
+    }
+    .card:hover .card-arrow { opacity: 1; }
+
+    /* ── COMING SOON CARD ── */
+    .card.coming-soon {
+      opacity: 0.45 !important;
+      cursor: default;
+      pointer-events: none;
+    }
+
+    /* ── FOOTER ── */
+    footer {
+      position: relative;
+      z-index: 1;
+      text-align: center;
+      padding: 2.5rem;
+      border-top: 1px solid var(--border);
+      color: var(--text-dim);
+      font-size: 0.82rem;
+      font-family: 'Space Mono', monospace;
+    }
+
+    /* ── ANIMATIONS ── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── HIDDEN ── */
+    .card.hidden {
+      display: none;
+    }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 600px) {
+      nav { padding: 1rem 1.2rem; }
+      .nav-links { display: none; }
+      .hero { padding: 5rem 1.2rem 3rem; }
+      .grid { padding: 0 1.2rem 4rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- NAV -->
+  <nav>
+    <span class="nav-logo">&lt;Hsiang /&gt;</span>
+    <ul class="nav-links">
+      <li><a href="#projects">作品集</a></li>
+      <li><a href="mailto:your@email.com">聯絡我</a></li>
+    </ul>
+  </nav>
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-tag">數學教師 × 網頁開發者</div>
+    <h1>探索 <span class="highlight">數學、遊戲</span><br>與 AI 的世界</h1>
+    <p>這裡收錄了我在教學與程式之間打造的各種工具與作品，<br>涵蓋互動遊戲、數學練習、AI 應用等主題。</p>
+  </section>
+
+  <!-- FILTER -->
+  <div class="filters" id="projects">
+    <button class="filter-btn active" data-cat="all" onclick="filterCards('all', this)">全部</button>
+    <button class="filter-btn" data-cat="math" onclick="filterCards('math', this)">📐 數學</button>
+    <button class="filter-btn" data-cat="game" onclick="filterCards('game', this)">🎮 遊戲</button>
+    <button class="filter-btn" data-cat="ai"   onclick="filterCards('ai',   this)">🤖 AI</button>
+  </div>
+
+  <!-- GRID -->
+  <div class="grid" id="cardGrid">
+
+    <!-- ── 數學類 ── -->
+    <a class="card" data-cat="math" href="#" style="animation-delay:0.1s">
+      <div class="card-icon">📐</div>
+      <span class="card-tag">MATH</span>
+      <h3>畢氏定理練習系統</h3>
+      <p>互動式題目產生器，支援自動出題與即時批改，適合七八年級學生練習。</p>
+      <div class="card-footer">
+        <div class="card-status"><span class="dot"></span> 上線中</div>
+        <span class="card-arrow">→</span>
+      </div>
+    </a>
+
+    <a class="card" data-cat="math" href="#" style="animation-delay:0.15s">
+      <div class="card-icon">📊</div>
+      <span class="card-tag">MATH</span>
+      <h3>一元一次方程式挑戰</h3>
+      <p>關卡式數學挑戰，從基本解方程到應用題，逐步提升難度。</p>
+      <div class="card-footer">
+        <div class="card-status"><span class="dot orange"></span> 開發中</div>
+        <span class="card-arrow">→</span>
+      </div>
+    </a>
+
+    <!-- ── 遊戲類 ── -->
+    <a class="card" data-cat="game" href="#" style="animation-delay:0.2s">
+      <div class="card-icon">🎮</div>
+      <span class="card-tag">GAME</span>
+      <h3>數字拼圖大挑戰</h3>
+      <p>結合邏輯與數學的益智小遊戲，訓練學生的數感與推理能力。</p>
+      <div class="card-footer">
+        <div class="card-status"><span class="dot"></span> 上線中</div>
+        <span class="card-arrow">→</span>
+      </div>
+    </a>
+
+    <a class="card coming-soon" data-cat="game" href="#" style="animation-delay:0.25s">
+      <div class="card-icon">🧩</div>
+      <span class="card-tag">GAME</span>
+      <h3>分數大戰（敬請期待）</h3>
+      <p>兩人對戰的分數計算小遊戲，在比賽中學好分數加減乘除。</p>
+      <div class="card-footer">
+        <div class="card-status"><span class="dot dim"></span> 即將推出</div>
+      </div>
+    </a>
+
+    <!-- ── AI 類 ── -->
+    <a class="card" data-cat="ai" href="#" style="animation-delay:0.3s">
+      <div class="card-icon">🤖</div>
+      <span class="card-tag">AI</span>
+      <h3>AI 數學出題小幫手</h3>
+      <p>輸入單元名稱，AI 自動生成適合的練習題與詳解，支援匯出 Word 檔。</p>
+      <div class="card-footer">
+        <div class="card-status"><span class="dot"></span> 上線中</div>
+        <span class="card-arrow">→</span>
+      </div>
+    </a>
+
+    <a class="card coming-soon" data-cat="ai" href="#" style="animation-delay:0.35s">
+      <div class="card-icon">💬</div>
+      <span class="card-tag">AI</span>
+      <h3>課後 AI 問答機器人（敬請期待）</h3>
+      <p>學生可以直接向 AI 提問數學概念，獲得逐步解題說明。</p>
+      <div class="card-footer">
+        <div class="card-status"><span class="dot dim"></span> 即將推出</div>
+      </div>
+    </a>
+
+  </div>
+
+  <!-- FOOTER -->
+  <footer>
+    <p>© 2025 Hsiang · 嘉義縣民和國中慈輝分校 · Built with ❤️ & GitHub Pages</p>
+  </footer>
+
+  <script>
+    // ── 篩選器 ──
+    function filterCards(cat, btn) {
+      // 更新按鈕狀態
+      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+
+      // 顯示 / 隱藏卡片
+      document.querySelectorAll('.card').forEach(card => {
+        if (cat === 'all' || card.dataset.cat === cat) {
+          card.classList.remove('hidden');
+        } else {
+          card.classList.add('hidden');
+        }
+      });
+    }
+
+    // ── 滾動入場動畫 ──
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(e => {
+        if (e.isIntersecting) {
+          e.target.style.animationPlayState = 'running';
+        }
+      });
+    }, { threshold: 0.1 });
+
+    document.querySelectorAll('.card').forEach(card => {
+      card.style.animationPlayState = 'paused';
+      observer.observe(card);
+    });
+  </script>
+</body>
+</html>
