@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🍎 可愛 BMI 計算機 + 食物代換表</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap');
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Nunito', 'Microsoft JhengHei', sans-serif;
+    background: linear-gradient(135deg, #fff0f5 0%, #f0f8ff 50%, #f5fff0 100%);
+    min-height: 100vh;
+    padding: 20px;
+    color: #555;
+  }
+
+  h1.title {
+    text-align: center;
+    font-size: 2.2rem;
+    font-weight: 800;
+    color: #ff6b9d;
+    margin-bottom: 6px;
+    text-shadow: 2px 2px 0 #ffd6e7;
+  }
+  .subtitle {
+    text-align: center;
+    color: #aaa;
+    font-size: 1rem;
+    margin-bottom: 30px;
+  }
+
+  .container { max-width: 900px; margin: 0 auto; }
+
+  /* ── BMI Card ── */
+  .card {
+    background: white;
+    border-radius: 24px;
+    padding: 28px 32px;
+    margin-bottom: 24px;
+    box-shadow: 0 8px 30px rgba(255,107,157,0.12);
+    border: 2px solid #ffe4ef;
+  }
+  .card-title {
+    font-size: 1.3rem;
+    font-weight: 800;
+    color: #ff6b9d;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .input-row {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+  }
+  .input-group {
+    flex: 1;
+    min-width: 180px;
+  }
+  .input-group label {
+    display: block;
+    font-weight: 700;
+    color: #ff9ec4;
+    margin-bottom: 6px;
+    font-size: 0.95rem;
+  }
+  .input-group input {
+    width: 100%;
+    padding: 12px 16px;
+    border: 2px solid #ffd6e7;
+    border-radius: 12px;
+    font-size: 1.1rem;
+    font-family: inherit;
+    outline: none;
+    transition: border 0.2s;
+    color: #555;
+  }
+  .input-group input:focus { border-color: #ff6b9d; }
+
+  .btn-calc {
+    display: block;
+    width: 100%;
+    padding: 14px;
+    background: linear-gradient(135deg, #ff6b9d, #ff9ec4);
+    color: white;
+    border: none;
+    border-radius: 14px;
+    font-size: 1.15rem;
+    font-weight: 800;
+    font-family: inherit;
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s;
+    box-shadow: 0 4px 15px rgba(255,107,157,0.35);
+  }
+  .btn-calc:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(255,107,157,0.45); }
+  .btn-calc:active { transform: translateY(0); }
+
+  /* ── Result ── */
+  .result-box {
+    display: none;
+    margin-top: 24px;
+    background: linear-gradient(135deg, #fff0f8, #fff8ff);
+    border-radius: 18px;
+    padding: 24px;
+    border: 2px dashed #ffc2dd;
+    text-align: center;
+  }
+  .result-box.show { display: block; animation: popIn 0.4s ease; }
+  @keyframes popIn {
+    0% { transform: scale(0.85); opacity: 0; }
+    70% { transform: scale(1.04); }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  .bmi-value {
+    font-size: 3.5rem;
+    font-weight: 800;
+    line-height: 1;
+    margin: 8px 0;
+  }
+  .bmi-label {
+    font-size: 1.4rem;
+    font-weight: 800;
+    margin-bottom: 16px;
+  }
+  .bmi-emoji { font-size: 2.5rem; }
+
+  /* ── BMI 色條 ── */
+  .bmi-bar-wrap { position: relative; margin: 16px 0 8px; }
+  .bmi-bar {
+    height: 20px;
+    border-radius: 10px;
+    background: linear-gradient(to right,
+      #74b9ff 0%, #74b9ff 20%,
+      #55efc4 20%, #55efc4 47%,
+      #fdcb6e 47%, #fdcb6e 62%,
+      #e17055 62%, #e17055 77%,
+      #d63031 77%, #d63031 90%,
+      #6c0000 90%, #6c0000 100%
+    );
+  }
+  .bmi-marker {
+    position: absolute;
+    top: -6px;
+    width: 10px;
+    height: 32px;
+    background: #333;
+    border-radius: 5px;
+    transform: translateX(-50%);
+    transition: left 0.6s cubic-bezier(.34,1.56,.64,1);
+  }
+  .bmi-scale-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.72rem;
+    color: #999;
+    margin-top: 4px;
+    padding: 0 2px;
+  }
+  .advice {
+    margin-top: 14px;
+    padding: 12px 16px;
+    border-radius: 12px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    line-height: 1.6;
+  }
+
+  /* ── BMI 對照表 ── */
+  .bmi-ref-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 16px;
+    font-size: 0.92rem;
+  }
+  .bmi-ref-table th {
+    background: #ffe4ef;
+    color: #ff6b9d;
+    padding: 10px 14px;
+    font-weight: 800;
+    border-radius: 8px;
+  }
+  .bmi-ref-table td {
+    padding: 9px 14px;
+    border-bottom: 1px solid #fff0f5;
+    text-align: center;
+  }
+  .bmi-ref-table tr:last-child td { border-bottom: none; }
+  .bmi-ref-table tr:hover td { background: #fff8fc; }
+  .badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 0.82rem;
+    font-weight: 700;
+  }
+
+  /* ── 食物代換表 ── */
+  .food-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 16px;
+  }
+  .food-card {
+    border-radius: 18px;
+    padding: 18px 20px;
+    border: 2px solid transparent;
+  }
+  .food-card-title {
+    font-size: 1.05rem;
+    font-weight: 800;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .food-card-kcal {
+    font-size: 0.8rem;
+    font-weight: 600;
+    opacity: 0.75;
+    margin-bottom: 10px;
+  }
+  .food-list { list-style: none; }
+  .food-list li {
+    padding: 4px 0;
+    font-size: 0.88rem;
+    border-bottom: 1px dashed rgba(0,0,0,0.06);
+    display: flex;
+    justify-content: space-between;
+  }
+  .food-list li:last-child { border-bottom: none; }
+  .food-amount { font-weight: 700; opacity: 0.8; }
+
+  /* Food card colors */
+  .fc-grain   { background:#fff9e6; border-color:#ffe580; }
+  .fc-grain .food-card-title { color:#c69500; }
+  .fc-protein { background:#fff0e6; border-color:#ffcc99; }
+  .fc-protein .food-card-title { color:#c06000; }
+  .fc-veg     { background:#edfff4; border-color:#9de8b8; }
+  .fc-veg .food-card-title { color:#1a8f4a; }
+  .fc-fruit   { background:#fff0f5; border-color:#ffadd2; }
+  .fc-fruit .food-card-title { color:#c0006e; }
+  .fc-dairy   { background:#f0f5ff; border-color:#aaccff; }
+  .fc-dairy .food-card-title { color:#0060c0; }
+  .fc-fat     { background:#f5f0ff; border-color:#ccaaff; }
+  .fc-fat .food-card-title { color:#6a00c0; }
+
+  /* ── 每日建議卡 ── */
+  .daily-card {
+    background: linear-gradient(135deg, #ffeef8, #eef5ff);
+    border-radius: 18px;
+    padding: 20px 24px;
+    margin-top: 18px;
+    border: 2px solid #ffd6ef;
+  }
+  .daily-title {
+    font-weight: 800;
+    color: #ff6b9d;
+    font-size: 1.1rem;
+    margin-bottom: 12px;
+  }
+  .daily-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 10px;
+  }
+  .daily-item {
+    background: white;
+    border-radius: 12px;
+    padding: 10px 12px;
+    text-align: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  }
+  .daily-item .di-icon { font-size: 1.8rem; }
+  .daily-item .di-name { font-size: 0.78rem; color: #aaa; margin: 2px 0; }
+  .daily-item .di-amt  { font-size: 0.95rem; font-weight: 800; color: #555; }
+
+  footer {
+    text-align: center;
+    color: #ccc;
+    font-size: 0.82rem;
+    margin-top: 30px;
+    padding-bottom: 20px;
+  }
+
+  /* ── 標籤頁 ── */
+  .tabs { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+  .tab-btn {
+    padding: 8px 20px;
+    border-radius: 20px;
+    border: 2px solid #ffd6e7;
+    background: white;
+    color: #ff9ec4;
+    font-family: inherit;
+    font-weight: 700;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .tab-btn.active, .tab-btn:hover {
+    background: #ff6b9d;
+    color: white;
+    border-color: #ff6b9d;
+  }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; animation: fadeIn 0.3s ease; }
+  @keyframes fadeIn { from{opacity:0; transform:translateY(6px)} to{opacity:1; transform:none} }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h1 class="title">🍓 可愛 BMI 計算機</h1>
+  <p class="subtitle">健康管理小幫手 ✨ 輸入身高體重，馬上知道你的健康狀態！</p>
+
+  <!-- ── BMI 計算機 ── -->
+  <div class="card">
+    <div class="card-title">🧮 BMI 計算</div>
+    <div class="input-row">
+      <div class="input-group">
+        <label>📏 身高（公分）</label>
+        <input type="number" id="height" placeholder="例：165" min="100" max="250">
+      </div>
+      <div class="input-group">
+        <label>⚖️ 體重（公斤）</label>
+        <input type="number" id="weight" placeholder="例：55" min="20" max="300">
+      </div>
+    </div>
+    <button class="btn-calc" onclick="calcBMI()">✨ 計算我的 BMI！</button>
+
+    <div class="result-box" id="result">
+      <div class="bmi-emoji" id="res-emoji">🌟</div>
+      <div class="bmi-value" id="res-value" style="color:#ff6b9d">--</div>
+      <div class="bmi-label" id="res-label"></div>
+
+      <div class="bmi-bar-wrap">
+        <div class="bmi-bar"></div>
+        <div class="bmi-marker" id="bmi-marker" style="left:0%"></div>
+      </div>
+      <div class="bmi-scale-labels">
+        <span>15</span><span>18.5</span><span>24</span><span>27</span><span>30</span><span>35</span><span>40</span>
+      </div>
+
+      <div class="advice" id="res-advice"></div>
+    </div>
+  </div>
+
+  <!-- ── BMI 對照表 ── -->
+  <div class="card">
+    <div class="card-title">📊 BMI 對照表（台灣衛福部標準）</div>
+    <table class="bmi-ref-table">
+      <thead>
+        <tr>
+          <th>BMI 值</th>
+          <th>體重狀態</th>
+          <th>建議</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>&lt; 18.5</td>
+          <td><span class="badge" style="background:#dff0ff;color:#0070c0">🔵 體重過輕</span></td>
+          <td>適量增加飲食，均衡營養</td>
+        </tr>
+        <tr>
+          <td>18.5 – 24</td>
+          <td><span class="badge" style="background:#d4f7e8;color:#006b3c">🟢 正常體重</span></td>
+          <td>維持現狀，繼續保持！</td>
+        </tr>
+        <tr>
+          <td>24 – 27</td>
+          <td><span class="badge" style="background:#fff3cd;color:#856404">🟡 體重過重</span></td>
+          <td>注意飲食，增加運動量</td>
+        </tr>
+        <tr>
+          <td>27 – 30</td>
+          <td><span class="badge" style="background:#ffe5d0;color:#b84500">🟠 輕度肥胖</span></td>
+          <td>控制熱量，規律運動</td>
+        </tr>
+        <tr>
+          <td>30 – 35</td>
+          <td><span class="badge" style="background:#ffd6d6;color:#c00000">🔴 中度肥胖</span></td>
+          <td>建議諮詢醫師或營養師</td>
+        </tr>
+        <tr>
+          <td>≥ 35</td>
+          <td><span class="badge" style="background:#d6b4e8;color:#5c0080">🟣 重度肥胖</span></td>
+          <td>請及早就醫評估</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ── 食物代換表 ── -->
+  <div class="card">
+    <div class="card-title">🍽️ 六大類食物代換表</div>
+    <p style="color:#aaa;font-size:0.88rem;margin-bottom:18px;">每「份」代換的份量與熱量，幫助你聰明規劃每日飲食 🌈</p>
+
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchTab('grain',this)">🌾 全穀雜糧</button>
+      <button class="tab-btn" onclick="switchTab('protein',this)">🥩 豆魚蛋肉</button>
+      <button class="tab-btn" onclick="switchTab('veg',this)">🥦 蔬菜類</button>
+      <button class="tab-btn" onclick="switchTab('fruit',this)">🍊 水果類</button>
+      <button class="tab-btn" onclick="switchTab('dairy',this)">🥛 乳品類</button>
+      <button class="tab-btn" onclick="switchTab('fat',this)">🥑 油脂堅果</button>
+    </div>
+
+    <!-- 全穀雜糧 -->
+    <div class="tab-content active" id="tab-grain">
+      <div class="food-grid">
+        <div class="food-card fc-grain">
+          <div class="food-card-title">🌾 主食類</div>
+          <div class="food-card-kcal">每份 ≈ 70 大卡｜醣類 15g、蛋白質 2g</div>
+          <ul class="food-list">
+            <li><span>白飯</span><span class="food-amount">1/4 碗（50g）</span></li>
+            <li><span>稀飯</span><span class="food-amount">1/2 碗（125g）</span></li>
+            <li><span>吐司</span><span class="food-amount">1片（30g）</span></li>
+            <li><span>饅頭</span><span class="food-amount">1/3 個（35g）</span></li>
+            <li><span>麵條（熟）</span><span class="food-amount">1/2 碗（60g）</span></li>
+            <li><span>蘇打餅乾</span><span class="food-amount">3片（20g）</span></li>
+          </ul>
+        </div>
+        <div class="food-card fc-grain">
+          <div class="food-card-title">🥔 根莖類</div>
+          <div class="food-card-kcal">每份 ≈ 70 大卡</div>
+          <ul class="food-list">
+            <li><span>馬鈴薯</span><span class="food-amount">1/2 個（90g）</span></li>
+            <li><span>番薯</span><span class="food-amount">1/2 個（55g）</span></li>
+            <li><span>芋頭</span><span class="food-amount">1/3 碗（55g）</span></li>
+            <li><span>南瓜</span><span class="food-amount">1/4 碗（85g）</span></li>
+            <li><span>玉米</span><span class="food-amount">2/3 根（85g）</span></li>
+            <li><span>山藥</span><span class="food-amount">1/3 碗（80g）</span></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- 豆魚蛋肉 -->
+    <div class="tab-content" id="tab-protein">
+      <p style="color:#c06000;font-size:0.85rem;margin-bottom:12px;font-weight:600;">
+        💡 依脂肪含量分為低脂（55kcal）、中脂（75kcal）、高脂（120kcal）三類
+      </p>
+      <div class="food-grid">
+        <div class="food-card fc-protein">
+          <div class="food-card-title">🐟 低脂類（55 大卡）</div>
+          <div class="food-card-kcal">蛋白質 7g、脂肪 3g</div>
+          <ul class="food-list">
+            <li><span>豆腐（嫩）</span><span class="food-amount">半盒（140g）</span></li>
+            <li><span>豆漿（無糖）</span><span class="food-amount">1杯（190ml）</span></li>
+            <li><span>吻仔魚</span><span class="food-amount">1湯匙（40g）</span></li>
+            <li><span>蝦仁</span><span class="food-amount">50g</span></li>
+            <li><span>鮪魚罐（水漬）</span><span class="food-amount">35g</span></li>
+            <li><span>雞胸肉</span><span class="food-amount">35g</span></li>
+          </ul>
+        </div>
+        <div class="food-card fc-protein">
+          <div class="food-card-title">🥚 中脂類（75 大卡）</div>
+          <div class="food-card-kcal">蛋白質 7g、脂肪 5g</div>
+          <ul class="food-list">
+            <li><span>雞蛋</span><span class="food-amount">1顆（55g）</span></li>
+            <li><span>豬里肌</span><span class="food-amount">35g</span></li>
+            <li><span>牛腱</span><span class="food-amount">35g</span></li>
+            <li><span>旗魚</span><span class="food-amount">35g</span></li>
+            <li><span>傳統豆腐</span><span class="food-amount">80g</span></li>
+          </ul>
+        </div>
+        <div class="food-card fc-protein">
+          <div class="food-card-title">🥓 高脂類（120 大卡）</div>
+          <div class="food-card-kcal">蛋白質 7g、脂肪 10g</div>
+          <ul class="food-list">
+            <li><span>五花肉</span><span class="food-amount">35g</span></li>
+            <li><span>豬蹄膀</span><span class="food-amount">35g</span></li>
+            <li><span>炸雞腿</span><span class="food-amount">35g</span></li>
+            <li><span>香腸</span><span class="food-amount">40g</span></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- 蔬菜 -->
+    <div class="tab-content" id="tab-veg">
+      <div class="food-grid">
+        <div class="food-card fc-veg">
+          <div class="food-card-title">🥦 葉菜類</div>
+          <div class="food-card-kcal">每份 ≈ 25 大卡（生重 100g / 熟重 50g）</div>
+          <ul class="food-list">
+            <li><span>菠菜</span><span class="food-amount">100g（生）</span></li>
+            <li><span>空心菜</span><span class="food-amount">100g</span></li>
+            <li><span>高麗菜</span><span class="food-amount">100g</span></li>
+            <li><span>地瓜葉</span><span class="food-amount">100g</span></li>
+            <li><span>小白菜</span><span class="food-amount">100g</span></li>
+          </ul>
+        </div>
+        <div class="food-card fc-veg">
+          <div class="food-card-title">🥕 瓜果根莖蔬菜</div>
+          <div class="food-card-kcal">每份 ≈ 25 大卡</div>
+          <ul class="food-list">
+            <li><span>番茄</span><span class="food-amount">1大顆（175g）</span></li>
+            <li><span>小黃瓜</span><span class="food-amount">1條（100g）</span></li>
+            <li><span>胡蘿蔔</span><span class="food-amount">70g</span></li>
+            <li><span>青椒</span><span class="food-amount">100g</span></li>
+            <li><span>菇類</span><span class="food-amount">100g</span></li>
+            <li><span>苦瓜</span><span class="food-amount">100g</span></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- 水果 -->
+    <div class="tab-content" id="tab-fruit">
+      <div class="food-grid">
+        <div class="food-card fc-fruit">
+          <div class="food-card-title">🍎 常見水果</div>
+          <div class="food-card-kcal">每份 ≈ 60 大卡｜醣類 15g</div>
+          <ul class="food-list">
+            <li><span>蘋果</span><span class="food-amount">小顆 1 個（130g）</span></li>
+            <li><span>香蕉</span><span class="food-amount">大香蕉半根（70g）</span></li>
+            <li><span>橘子</span><span class="food-amount">1顆（190g）</span></li>
+            <li><span>葡萄</span><span class="food-amount">13 粒（85g）</span></li>
+            <li><span>西瓜</span><span class="food-amount">1片（365g）</span></li>
+            <li><span>木瓜</span><span class="food-amount">1/4 個（150g）</span></li>
+          </ul>
+        </div>
+        <div class="food-card fc-fruit">
+          <div class="food-card-title">🍓 莓果 / 熱帶水果</div>
+          <div class="food-card-kcal">每份 ≈ 60 大卡</div>
+          <ul class="food-list">
+            <li><span>草莓</span><span class="food-amount">16 粒（160g）</span></li>
+            <li><span>芒果</span><span class="food-amount">1/2 個（150g）</span></li>
+            <li><span>奇異果</span><span class="food-amount">1.5 顆（125g）</span></li>
+            <li><span>鳳梨</span><span class="food-amount">1/10 個（130g）</span></li>
+            <li><span>龍眼</span><span class="food-amount">13 粒（130g）</span></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- 乳品 -->
+    <div class="tab-content" id="tab-dairy">
+      <div class="food-grid">
+        <div class="food-card fc-dairy">
+          <div class="food-card-title">🥛 牛奶 / 羊奶</div>
+          <div class="food-card-kcal">每份 ≈ 150 大卡（全脂）/ 120kcal（低脂）/ 80kcal（脫脂）</div>
+          <ul class="food-list">
+            <li><span>全脂牛奶</span><span class="food-amount">1杯（240ml）</span></li>
+            <li><span>低脂牛奶</span><span class="food-amount">1杯（240ml）</span></li>
+            <li><span>脫脂牛奶</span><span class="food-amount">1杯（240ml）</span></li>
+            <li><span>全脂奶粉</span><span class="food-amount">4湯匙（30g）</span></li>
+            <li><span>低脂奶粉</span><span class="food-amount">3湯匙（25g）</span></li>
+          </ul>
+        </div>
+        <div class="food-card fc-dairy">
+          <div class="food-card-title">🧀 乳製品</div>
+          <div class="food-card-kcal">每份 ≈ 150 大卡（全脂）</div>
+          <ul class="food-list">
+            <li><span>優格（全脂）</span><span class="food-amount">1杯（210g）</span></li>
+            <li><span>起司片</span><span class="food-amount">2片（45g）</span></li>
+            <li><span>茅屋起司</span><span class="food-amount">7湯匙（110g）</span></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- 油脂 -->
+    <div class="tab-content" id="tab-fat">
+      <div class="food-grid">
+        <div class="food-card fc-fat">
+          <div class="food-card-title">🫒 植物油 / 動物油</div>
+          <div class="food-card-kcal">每份 ≈ 45 大卡｜脂肪 5g</div>
+          <ul class="food-list">
+            <li><span>橄欖油 / 沙拉油</span><span class="food-amount">1茶匙（5g）</span></li>
+            <li><span>豬油 / 牛油</span><span class="food-amount">1茶匙（5g）</span></li>
+            <li><span>奶油（butter）</span><span class="food-amount">1茶匙（5g）</span></li>
+            <li><span>沙拉醬</span><span class="food-amount">2茶匙（10g）</span></li>
+          </ul>
+        </div>
+        <div class="food-card fc-fat">
+          <div class="food-card-title">🥜 堅果種子</div>
+          <div class="food-card-kcal">每份 ≈ 45 大卡</div>
+          <ul class="food-list">
+            <li><span>花生</span><span class="food-amount">10粒（13g）</span></li>
+            <li><span>腰果</span><span class="food-amount">5粒（10g）</span></li>
+            <li><span>核桃</span><span class="food-amount">2粒（7g）</span></li>
+            <li><span>杏仁</span><span class="food-amount">5粒（8g）</span></li>
+            <li><span>芝麻</span><span class="food-amount">1湯匙（9g）</span></li>
+            <li><span>南瓜子</span><span class="food-amount">1湯匙（9g）</span></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- 每日建議 -->
+    <div class="daily-card">
+      <div class="daily-title">🌈 成人每日飲食建議份數（1800大卡參考）</div>
+      <div class="daily-grid">
+        <div class="daily-item">
+          <div class="di-icon">🌾</div>
+          <div class="di-name">全穀雜糧</div>
+          <div class="di-amt">2.5~4 碗</div>
+        </div>
+        <div class="daily-item">
+          <div class="di-icon">🥩</div>
+          <div class="di-name">豆魚蛋肉</div>
+          <div class="di-amt">5~6 份</div>
+        </div>
+        <div class="daily-item">
+          <div class="di-icon">🥦</div>
+          <div class="di-name">蔬菜類</div>
+          <div class="di-amt">3~5 份</div>
+        </div>
+        <div class="daily-item">
+          <div class="di-icon">🍊</div>
+          <div class="di-name">水果類</div>
+          <div class="di-amt">2~4 份</div>
+        </div>
+        <div class="daily-item">
+          <div class="di-icon">🥛</div>
+          <div class="di-name">乳品類</div>
+          <div class="di-amt">1.5~2 份</div>
+        </div>
+        <div class="daily-item">
+          <div class="di-icon">🥑</div>
+          <div class="di-name">油脂堅果</div>
+          <div class="di-amt">3~7 份</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    🌸 資料來源：衛生福利部國民健康署 ｜ 本工具僅供參考，如有健康疑慮請諮詢醫師 🌸
+  </footer>
+</div>
+
+<script>
+  // ── BMI 計算 ──
+  const STATUS = [
+    { max: 18.5, label:'體重過輕', color:'#74b9ff', bg:'#dff0ff', emoji:'💙',
+      advice:'你的體重有點輕喔～建議增加均衡飲食，多補充蛋白質和全穀類，讓身體更有活力！' },
+    { max: 24,   label:'正常體重', color:'#00b894', bg:'#d4f7e8', emoji:'💚',
+      advice:'太棒了！你的體重在健康範圍內 🎉 繼續保持均衡飲食和規律運動，就是最棒的自己！' },
+    { max: 27,   label:'體重過重', color:'#fdcb6e', bg:'#fff3cd', emoji:'💛',
+      advice:'體重稍微超標了一點，建議減少精緻糖和油脂攝取，每天快走 30 分鐘，慢慢就能回到健康範圍！' },
+    { max: 30,   label:'輕度肥胖', color:'#e17055', bg:'#ffe5d0', emoji:'🧡',
+      advice:'建議開始有計畫地控制飲食熱量，搭配有氧運動，可以諮詢營養師制定個人化飲食計畫。' },
+    { max: 35,   label:'中度肥胖', color:'#d63031', bg:'#ffd6d6', emoji:'❤️',
+      advice:'建議積極就醫評估，配合專業醫師和營養師的指導，透過飲食控制和運動改善體重。' },
+    { max: Infinity, label:'重度肥胖', color:'#6c0000', bg:'#e8d0e8', emoji:'💜',
+      advice:'請及早就醫！重度肥胖會增加多種慢性病風險，醫師可評估是否需要藥物或手術治療。' },
+  ];
+
+  function calcBMI() {
+    const h = parseFloat(document.getElementById('height').value);
+    const w = parseFloat(document.getElementById('weight').value);
+    if (!h || !w || h < 100 || w < 20) {
+      alert('請輸入正確的身高和體重喔！😊');
+      return;
+    }
+    const bmi = w / ((h / 100) ** 2);
+    const st = STATUS.find(s => bmi < s.max);
+
+    document.getElementById('res-value').textContent = bmi.toFixed(1);
+    document.getElementById('res-value').style.color = st.color;
+    document.getElementById('res-label').textContent = st.label;
+    document.getElementById('res-label').style.color = st.color;
+    document.getElementById('res-emoji').textContent = st.emoji;
+    document.getElementById('res-advice').textContent = '💡 ' + st.advice;
+    document.getElementById('res-advice').style.background = st.bg;
+    document.getElementById('res-advice').style.color = st.color;
+
+    // 色條指針 (15~40 範圍)
+    const pct = Math.min(Math.max((bmi - 15) / (40 - 15) * 100, 1), 99);
+    document.getElementById('bmi-marker').style.left = pct + '%';
+
+    const box = document.getElementById('result');
+    box.classList.remove('show');
+    void box.offsetWidth; // reflow
+    box.classList.add('show');
+  }
+
+  // Enter 鍵觸發計算
+  document.addEventListener('keydown', e => { if (e.key === 'Enter') calcBMI(); });
+
+  // ── 標籤頁切換 ──
+  function switchTab(id, btn) {
+    document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+    document.getElementById('tab-' + id).classList.add('active');
+    btn.classList.add('active');
+  }
+</script>
+
+<!-- ══ QR Code 懸浮元件 ══ -->
+<style>
+  #qr-fab {
+    position: fixed; bottom: 1.5rem; right: 1.5rem;
+    z-index: 9999; display: flex; flex-direction: column;
+    align-items: flex-end; gap: 0.6rem;
+    font-family: 'Nunito', sans-serif;
+  }
+  #qr-panel {
+    background: #1a2035; border: 1px solid #2a3350;
+    border-radius: 16px; padding: 1.4rem 1.4rem 1rem;
+    text-align: center; box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+    display: none; flex-direction: column; align-items: center;
+    gap: 0.7rem; min-width: 190px; animation: qrFadeIn 0.2s ease;
+  }
+  #qr-panel.open { display: flex; }
+  @keyframes qrFadeIn {
+    from { opacity:0; transform: translateY(10px) scale(0.96); }
+    to   { opacity:1; transform: translateY(0) scale(1); }
+  }
+  #qr-panel-title { font-size: 0.82rem; font-weight: 600; color: #e8eaf2; line-height: 1.4; max-width: 170px; }
+  #qr-panel img { width: 160px; height: 160px; background: #fff; border-radius: 10px; padding: 6px; display: block; }
+  #qr-panel-url { font-size: 0.58rem; color: #7a8099; word-break: break-all; max-width: 170px; line-height: 1.4; font-family: monospace; }
+  #qr-panel-close { font-size: 0.72rem; color: #7a8099; background: none; border: 1px solid #2a3350; border-radius: 100px; padding: 0.2rem 0.8rem; cursor: pointer; transition: color 0.15s; }
+  #qr-panel-close:hover { color: #e8eaf2; }
+  #qr-toggle-btn { width: 48px; height: 48px; border-radius: 50%; background: linear-gradient(135deg, #00c9a7, #7c6ded); border: none; font-size: 1.4rem; cursor: pointer; box-shadow: 0 4px 20px rgba(0,201,167,0.4); transition: transform 0.2s, box-shadow 0.2s; display: flex; align-items: center; justify-content: center; }
+  #qr-toggle-btn:hover { transform: scale(1.1); box-shadow: 0 6px 28px rgba(0,201,167,0.6); }
+</style>
+<div id="qr-fab">
+  <div id="qr-panel">
+    <div id="qr-panel-title">🍎 可愛 BMI 計算機</div>
+    <img src="https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=https%3A%2F%2Fcwmps.github.io%2Fother%2Fbmi-calculator.html" alt="QR Code" loading="lazy"/>
+    <div id="qr-panel-url">https://cwmps.github.io/other/bmi-calculator.html</div>
+    <button id="qr-panel-close" onclick="toggleQR()">關閉</button>
+  </div>
+  <button id="qr-toggle-btn" onclick="toggleQR()" title="掃描 QR Code">📱</button>
+</div>
+<script>
+  function toggleQR() { document.getElementById('qr-panel').classList.toggle('open'); }
+  document.addEventListener('click', function(e) {
+    const fab = document.getElementById('qr-fab');
+    if (fab && !fab.contains(e.target)) document.getElementById('qr-panel').classList.remove('open');
+  });
+</script>
+
+</body>
+</html>
