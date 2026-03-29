@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>黏土小鎮 - 今彩 539 開獎器</title>
+    <style>
+        /* 黏土風格核心樣式 */
+        :root {
+            --clay-bg: #f0e5d8;
+            --clay-red: #ff6b6b;
+            --clay-blue: #4d96ff;
+            --clay-yellow: #ffd93d;
+            --clay-green: #6bc119;
+            --clay-shadow: rgba(0, 0, 0, 0.15);
+            --clay-highlight: rgba(255, 255, 255, 0.4);
+        }
+
+        body {
+            background-color: var(--clay-bg);
+            font-family: "Microsoft JhengHei", "Rounded Mplus 1c", sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            color: #5d4037;
+            margin: 0;
+            overflow-x: hidden;
+        }
+
+        /* 音樂控制按鈕 */
+        .music-control {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 100;
+        }
+
+        .music-btn {
+            width: 50px;
+            height: 50px;
+            background: var(--clay-yellow);
+            border: 4px solid #fff;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 4px 4px 0px var(--clay-shadow);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            transition: 0.2s;
+        }
+
+        .music-btn:active { transform: scale(0.9); }
+        .music-btn.off { filter: grayscale(1); opacity: 0.7; }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            color: var(--clay-red);
+            text-shadow: 2px 2px 0px #fff, 4px 4px 0px var(--clay-shadow);
+            margin-bottom: 5px;
+        }
+
+        p {
+            font-size: 1.1rem;
+            background: var(--clay-yellow);
+            padding: 5px 15px;
+            border-radius: 15px;
+            box-shadow: 3px 3px 0px var(--clay-shadow);
+            display: inline-block;
+        }
+
+        /* 黏土容器 */
+        .clay-card {
+            background: #fff;
+            border-radius: 40px;
+            box-shadow: 
+                8px 8px 0px var(--clay-shadow),
+                inset -6px -6px 10px rgba(0,0,0,0.05),
+                inset 6px 6px 10px rgba(255,255,255,0.8);
+            width: 95%;
+            max-width: 600px;
+            padding: 30px;
+            border: 6px solid #fff;
+            position: relative;
+            box-sizing: border-box;
+        }
+
+        /* 號碼球顯示 */
+        .ball-container {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            margin: 30px 0;
+            min-height: 80px;
+            flex-wrap: wrap;
+        }
+
+        .clay-ball {
+            width: 60px;
+            height: 60px;
+            background: var(--clay-blue);
+            border-radius: 45% 55% 50% 50% / 50% 50% 50% 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.6rem;
+            font-weight: bold;
+            box-shadow: 
+                4px 4px 0px rgba(0,0,0,0.1),
+                inset -4px -4px 8px rgba(0,0,0,0.2),
+                inset 4px 4px 8px rgba(255,255,255,0.3);
+            transform: scale(0);
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: relative;
+        }
+
+        .clay-ball::after {
+            content: '';
+            position: absolute;
+            top: 8px;
+            left: 12px;
+            width: 10px;
+            height: 6px;
+            background: var(--clay-highlight);
+            border-radius: 50%;
+        }
+
+        .clay-ball.pop {
+            transform: scale(1);
+            animation: clay-wobble 0.6s ease;
+        }
+
+        @keyframes clay-wobble {
+            0% { transform: scale(0) rotate(-10deg); }
+            50% { transform: scale(1.2) rotate(10deg); }
+            75% { transform: scale(0.9) rotate(-5deg); }
+            100% { transform: scale(1) rotate(0deg); }
+        }
+
+        /* 按鈕設計 */
+        .clay-btn {
+            background: var(--clay-red);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            border-radius: 20px;
+            cursor: pointer;
+            box-shadow: 0 6px 0px #c0392b;
+            transition: all 0.1s;
+            margin: 10px;
+        }
+
+        .clay-btn:hover { transform: translateY(2px); box-shadow: 0 4px 0px #c0392b; }
+        .clay-btn:active { transform: translateY(6px); box-shadow: 0 0px 0px #c0392b; }
+        .clay-btn:disabled { background: #ccc; box-shadow: 0 6px 0px #999; cursor: not-allowed; }
+
+        /* 輸入區 */
+        .input-section {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 4px dotted #ddd;
+            text-align: center;
+        }
+
+        .input-group {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        input {
+            width: 45px;
+            height: 45px;
+            border: 4px solid #f0e5d8;
+            border-radius: 15px;
+            font-size: 1.2rem;
+            text-align: center;
+            color: var(--clay-blue);
+            background: #fff;
+            box-shadow: inset 3px 3px 5px var(--clay-shadow);
+            outline: none;
+        }
+
+        input:focus { border-color: var(--clay-yellow); }
+
+        #result-text {
+            margin-top: 20px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: var(--clay-red);
+            min-height: 30px;
+        }
+
+        .clay-character {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            font-size: 3.5rem;
+            filter: drop-shadow(5px 5px 0px var(--clay-shadow));
+            animation: idle 3s ease-in-out infinite;
+            pointer-events: none;
+        }
+
+        @keyframes idle {
+            0%, 100% { transform: translateY(0) scaleX(1); }
+            50% { transform: translateY(-10px) scaleX(1.05); }
+        }
+
+        @media (max-width: 480px) {
+            h1 { font-size: 2rem; }
+            .clay-ball { width: 50px; height: 50px; font-size: 1.3rem; }
+            input { width: 40px; height: 40px; font-size: 1rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 音樂控制 -->
+    <div class="music-control">
+        <button class="music-btn off" id="musicToggle" title="點擊播放背景音樂">🎵</button>
+        <audio id="bgMusic" loop preload="auto">
+            <source src="https://assets.mixkit.co/music/preview/mixkit-funny-times-7.mp3" type="audio/mpeg">
+        </audio>
+    </div>
+
+    <header>
+        <h1>🖐️ 黏土 539 開獎</h1>
+        <p>手工捏製的幸運驚喜</p>
+    </header>
+
+    <div class="clay-card">
+        <div style="text-align: center;">
+            <div id="draw-status" style="font-weight: bold; color: #888;">點擊下方按鈕開始捏球...</div>
+            <div class="ball-container" id="ball-display">
+                <div class="clay-ball">?</div>
+                <div class="clay-ball">?</div>
+                <div class="clay-ball">?</div>
+                <div class="clay-ball">?</div>
+                <div class="clay-ball">?</div>
+            </div>
+            <button class="clay-btn" onclick="startClayDraw()" id="draw-btn">開始捏球開獎！</button>
+        </div>
+
+        <div class="input-section">
+            <h3 style="margin-bottom: 15px;">選出你的 5 個號碼 (1-39)</h3>
+            <div class="input-group">
+                <input type="number" class="user-val" min="1" max="39" placeholder="1">
+                <input type="number" class="user-val" min="1" max="39" placeholder="2">
+                <input type="number" class="user-val" min="1" max="39" placeholder="3">
+                <input type="number" class="user-val" min="1" max="39" placeholder="4">
+                <input type="number" class="user-val" min="1" max="39" placeholder="5">
+            </div>
+            <button class="clay-btn" style="background: var(--clay-green); box-shadow: 0 6px 0px #4d8a11;" onclick="checkClayPrize()">核對黏土獎項</button>
+            <div id="result-text"></div>
+        </div>
+    </div>
+
+    <div class="clay-character">🐹</div>
+
+    <script>
+        let winningNumbers = [];
+        const music = document.getElementById('bgMusic');
+        const musicToggle = document.getElementById('musicToggle');
+        
+        // 音頻上下文（用於生成即時音效，防止外部連結失效）
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+        function playPopSound() {
+            const oscillator = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            oscillator.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            oscillator.type = 'sine';
+            oscillator.frequency.setValueAtTime(440, audioCtx.currentTime);
+            oscillator.frequency.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+            gainNode.gain.setValueAtTime(0.2, audioCtx.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+            oscillator.start();
+            oscillator.stop(audioCtx.currentTime + 0.1);
+        }
+
+        // 音樂切換邏輯
+        musicToggle.onclick = () => {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            if (music.paused) {
+                music.play().then(() => {
+                    musicToggle.classList.remove('off');
+                    musicToggle.innerText = '🔊';
+                }).catch(e => {
+                    console.log("播放失敗，嘗試先點擊頁面其它位置。");
+                });
+            } else {
+                music.pause();
+                musicToggle.classList.add('off');
+                musicToggle.innerText = '🎵';
+            }
+        };
+
+        async function startClayDraw() {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            // 自動嘗試播放背景音樂（若已點擊則有效）
+            if (music.paused && !musicToggle.classList.contains('off')) {
+                music.play().catch(()=>{});
+            }
+
+            const btn = document.getElementById('draw-btn');
+            const status = document.getElementById('draw-status');
+            const ballContainer = document.getElementById('ball-display');
+            
+            btn.disabled = true;
+            status.innerText = "正在揉捏黏土中...";
+            document.getElementById('result-text').innerText = "";
+            
+            ballContainer.innerHTML = '';
+            for(let i=0; i<5; i++) {
+                const b = document.createElement('div');
+                b.className = 'clay-ball';
+                b.innerText = '?';
+                ballContainer.appendChild(b);
+            }
+
+            let pool = Array.from({length: 39}, (_, i) => i + 1);
+            winningNumbers = [];
+            for(let i=0; i<5; i++) {
+                let idx = Math.floor(Math.random() * pool.length);
+                winningNumbers.push(pool.splice(idx, 1)[0]);
+            }
+
+            const balls = document.querySelectorAll('.clay-ball');
+
+            for(let i=0; i<5; i++) {
+                await new Promise(r => setTimeout(r, 600 + Math.random() * 400));
+                balls[i].innerText = winningNumbers[i];
+                balls[i].classList.add('pop');
+                playPopSound(); // 彈出時播放即時生成的音效
+                status.innerText = `捏出了號碼 ${winningNumbers[i]}！`;
+            }
+
+            status.innerText = "開獎完成！";
+            btn.disabled = false;
+        }
+
+        function checkClayPrize() {
+            if (winningNumbers.length === 0) {
+                alert("請先捏出開獎號碼球！");
+                return;
+            }
+
+            const inputs = document.querySelectorAll('.user-val');
+            let userSelection = new Set();
+            for (let input of inputs) {
+                let val = parseInt(input.value);
+                if (isNaN(val) || val < 1 || val > 39) {
+                    alert("請輸入 1 到 39 之間的號碼。");
+                    return;
+                }
+                userSelection.add(val);
+            }
+
+            if (userSelection.size < 5) {
+                alert("號碼不能重複喔！");
+                return;
+            }
+
+            let userArray = Array.from(userSelection);
+            let matchCount = userArray.filter(n => winningNumbers.includes(n)).length;
+            const resultDiv = document.getElementById('result-text');
+            
+            let message = "";
+            switch(matchCount) {
+                case 5: message = "🎨 頭獎！你捏出了完美的命運！ (800萬)"; break;
+                case 4: message = "🌈 貳獎！黏土精靈對你露出了微笑！ (2萬)"; break;
+                case 3: message = "🌟 參獎！很有天份的運氣喔！ (300元)"; break;
+                case 2: message = "🌱 肆獎！獲得了一個小小的黏土徽章。 (50元)"; break;
+                default: message = `對中了 ${matchCount} 個號碼。再接再厲！`;
+            }
+            resultDiv.innerText = message;
+        }
+    </script>
+
+<!-- ══ QR Code 懸浮元件 ══ -->
+<style>
+  #qr-fab {
+    position: fixed;
+    bottom: 1.5rem;
+    right: 1.5rem;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.6rem;
+    font-family: 'Noto Sans TC', sans-serif;
+  }
+  #qr-panel {
+    background: #1a2035;
+    border: 1px solid #2a3350;
+    border-radius: 16px;
+    padding: 1.4rem 1.4rem 1rem;
+    text-align: center;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.7rem;
+    min-width: 190px;
+    animation: qrFadeIn 0.2s ease;
+  }
+  #qr-panel.open { display: flex; }
+  @keyframes qrFadeIn {
+    from { opacity:0; transform: translateY(10px) scale(0.96); }
+    to   { opacity:1; transform: translateY(0)   scale(1);    }
+  }
+  #qr-panel-title {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #e8eaf2;
+    line-height: 1.4;
+    max-width: 170px;
+  }
+  #qr-panel img {
+    width: 160px; height: 160px;
+    background: #fff;
+    border-radius: 10px;
+    padding: 6px;
+    display: block;
+  }
+  #qr-panel-url {
+    font-size: 0.58rem;
+    color: #7a8099;
+    word-break: break-all;
+    max-width: 170px;
+    line-height: 1.4;
+    font-family: monospace;
+  }
+  #qr-panel-close {
+    font-size: 0.72rem;
+    color: #7a8099;
+    background: none;
+    border: 1px solid #2a3350;
+    border-radius: 100px;
+    padding: 0.2rem 0.8rem;
+    cursor: pointer;
+    transition: color 0.15s;
+  }
+  #qr-panel-close:hover { color: #e8eaf2; }
+  #qr-toggle-btn {
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #00c9a7, #7c6ded);
+    border: none;
+    font-size: 1.4rem;
+    cursor: pointer;
+    box-shadow: 0 4px 20px rgba(0,201,167,0.4);
+    transition: transform 0.2s, box-shadow 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  #qr-toggle-btn:hover {
+    transform: scale(1.1);
+    box-shadow: 0 6px 28px rgba(0,201,167,0.6);
+  }
+</style>
+
+<div id="qr-fab">
+  <div id="qr-panel">
+    <div id="qr-panel-title">今彩 539 開獎模擬</div>
+    <img src="https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=https%3A%2F%2Fcwmps.github.io%2Fmath%2Fprobability%2F539.html"
+         alt="QR Code" loading="lazy" />
+    <div id="qr-panel-url">https://cwmps.github.io/math/probability/539.html</div>
+    <button id="qr-panel-close" onclick="toggleQR()">關閉</button>
+  </div>
+  <button id="qr-toggle-btn" onclick="toggleQR()" title="掃描 QR Code">📱</button>
+</div>
+
+<script>
+  function toggleQR() {
+    const p = document.getElementById('qr-panel');
+    p.classList.toggle('open');
+  }
+  // 點擊外部關閉
+  document.addEventListener('click', function(e) {
+    const fab = document.getElementById('qr-fab');
+    if (fab && !fab.contains(e.target)) {
+      document.getElementById('qr-panel').classList.remove('open');
+    }
+  });
+</script>
+
+</body>
+</html>

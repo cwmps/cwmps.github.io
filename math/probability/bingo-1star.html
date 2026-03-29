@@ -1,0 +1,1397 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🌿 森の BINGO ゲーム</title>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;500;700;900&family=Klee+One:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --sky: #c8e6f0;
+  --sky2: #a8d8ea;
+  --grass: #7daa6e;
+  --grass2: #5a8a4a;
+  --soil: #8b6347;
+  --cream: #fdf6e3;
+  --warm: #f9eac3;
+  --leaf: #4a7c59;
+  --gold: #d4a017;
+  --red: #c44b2b;
+  --soot: #3a3a4a;
+  --cloud: rgba(255,255,255,0.85);
+  --shadow: rgba(60,40,20,0.15);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'Klee One', cursive;
+  background: var(--sky);
+  min-height: 100vh;
+  overflow-x: hidden;
+  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='12' r='4' fill='%234a7c59' opacity='0.7'/%3E%3Ccircle cx='12' cy='12' r='1.5' fill='%23fdf6e3'/%3E%3C/svg%3E") 12 12, auto;
+}
+
+/* ===== SKY & BACKGROUND ===== */
+.sky-bg {
+  position: fixed;
+  inset: 0;
+  background: linear-gradient(180deg, #b8daf0 0%, #d4ecf7 40%, #c8e6c2 70%, #7daa6e 100%);
+  z-index: -3;
+}
+
+/* Animated clouds */
+.cloud-layer {
+  position: fixed;
+  top: 0; left: 0;
+  width: 300%;
+  height: 45vh;
+  z-index: -2;
+  animation: cloudDrift 80s linear infinite;
+}
+
+@keyframes cloudDrift {
+  from { transform: translateX(0); }
+  to { transform: translateX(-33.33%); }
+}
+
+.cloud {
+  position: absolute;
+  border-radius: 50px;
+  background: rgba(255,255,255,0.78);
+  filter: blur(2px);
+}
+
+/* Grass ground */
+.ground {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  height: 22vh;
+  z-index: -1;
+  overflow: hidden;
+}
+
+.grass-wave {
+  position: absolute;
+  bottom: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* Fireflies / soot sprites */
+.soot-container {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.soot {
+  position: absolute;
+  border-radius: 50%;
+  background: var(--soot);
+  opacity: 0;
+  animation: sootFloat var(--dur, 8s) ease-in-out var(--delay, 0s) infinite;
+}
+
+.soot::before, .soot::after {
+  content: '';
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.4);
+}
+
+.soot::before { width: 30%; height: 30%; top: 15%; left: 20%; }
+.soot::after  { width: 20%; height: 20%; top: 20%; left: 50%; }
+
+@keyframes sootFloat {
+  0%   { transform: translate(0,0) scale(0.8); opacity: 0; }
+  10%  { opacity: 0.7; }
+  50%  { transform: translate(var(--tx,20px), var(--ty,-60px)) scale(1); opacity: 0.6; }
+  90%  { opacity: 0.3; }
+  100% { transform: translate(var(--tx2,40px), var(--ty2,-120px)) scale(0.6); opacity: 0; }
+}
+
+/* Leaves floating */
+.leaf-el {
+  position: absolute;
+  width: 18px;
+  height: 10px;
+  border-radius: 50% 0 50% 0;
+  opacity: 0;
+  animation: leafFall var(--ldur, 12s) ease-in-out var(--ldelay, 0s) infinite;
+}
+
+@keyframes leafFall {
+  0%   { transform: translateY(-20px) rotate(0deg); opacity: 0; }
+  10%  { opacity: 0.8; }
+  100% { transform: translateY(100vh) rotate(720deg) translateX(var(--lx, 30px)); opacity: 0; }
+}
+
+/* ===== MAIN LAYOUT ===== */
+.page {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 24px 16px 60px;
+  min-height: 100vh;
+}
+
+/* ===== HEADER ===== */
+.header {
+  text-align: center;
+  margin-bottom: 20px;
+  position: relative;
+}
+
+.header-banner {
+  background: var(--cream);
+  border-radius: 18px;
+  padding: 16px 36px 12px;
+  display: inline-block;
+  box-shadow: 0 6px 24px var(--shadow), inset 0 1px 0 rgba(255,255,255,0.8);
+  position: relative;
+  border: 2.5px solid rgba(122,160,100,0.5);
+}
+
+.header-banner::before, .header-banner::after {
+  content: '🌿';
+  position: absolute;
+  font-size: 22px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+.header-banner::before { left: 10px; }
+.header-banner::after  { right: 10px; }
+
+.title-jp {
+  font-family: 'Zen Maru Gothic', sans-serif;
+  font-size: 12px;
+  letter-spacing: 5px;
+  color: var(--grass2);
+  margin-bottom: 4px;
+}
+
+.title-main {
+  font-family: 'Zen Maru Gothic', sans-serif;
+  font-size: 46px;
+  font-weight: 900;
+  color: var(--leaf);
+  text-shadow: 3px 3px 0 rgba(74,124,89,0.2), 0 0 30px rgba(125,170,110,0.3);
+  line-height: 1;
+  letter-spacing: 6px;
+}
+
+.title-sub {
+  font-size: 11px;
+  color: rgba(74,124,89,0.7);
+  letter-spacing: 2px;
+  margin-top: 3px;
+}
+
+/* ===== TOTORO-LIKE MASCOT AREA ===== */
+.mascot-row {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.mascot {
+  width: 64px;
+  height: 72px;
+  position: relative;
+  animation: mascotBounce 3s ease-in-out infinite;
+  cursor: pointer;
+  filter: drop-shadow(0 4px 8px rgba(60,40,20,0.2));
+}
+
+@keyframes mascotBounce {
+  0%,100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+/* ===== CURRENT NUMBER BIG DISPLAY ===== */
+.num-display-wrap {
+  margin-bottom: 18px;
+  position: relative;
+}
+
+.num-display-card {
+  background: var(--cream);
+  border-radius: 50%;
+  width: 140px;
+  height: 140px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 32px var(--shadow), 0 2px 0 rgba(255,255,255,0.9) inset;
+  border: 4px solid rgba(122,160,100,0.6);
+  position: relative;
+  overflow: hidden;
+}
+
+.num-display-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 35% 30%, rgba(255,255,255,0.5) 0%, transparent 60%);
+}
+
+.num-label {
+  font-size: 10px;
+  letter-spacing: 2px;
+  color: rgba(74,124,89,0.7);
+  font-family: 'Zen Maru Gothic', sans-serif;
+  position: relative;
+  z-index: 1;
+}
+
+.num-big {
+  font-family: 'Zen Maru Gothic', sans-serif;
+  font-size: 64px;
+  font-weight: 900;
+  color: var(--leaf);
+  line-height: 1;
+  position: relative;
+  z-index: 1;
+}
+
+.num-big.pop {
+  animation: numPop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes numPop {
+  0%   { transform: scale(0.3) rotate(-10deg); opacity: 0; }
+  60%  { transform: scale(1.2) rotate(3deg); }
+  100% { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+
+.num-subtitle {
+  font-size: 9px;
+  color: var(--grass2);
+  position: relative;
+  z-index: 1;
+  margin-top: 2px;
+}
+
+/* sparkle ring */
+.num-display-wrap .sparkles {
+  position: absolute;
+  inset: -20px;
+  pointer-events: none;
+}
+
+.sparkle {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--gold);
+  opacity: 0;
+}
+
+.sparkle.active {
+  animation: sparkleOut 0.6s ease-out forwards;
+}
+
+@keyframes sparkleOut {
+  0%   { transform: translate(0,0) scale(1); opacity: 1; }
+  100% { transform: translate(var(--sx,0px), var(--sy,-40px)) scale(0); opacity: 0; }
+}
+
+/* ===== CONTROLS ===== */
+.controls {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 18px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.btn {
+  font-family: 'Zen Maru Gothic', sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  padding: 12px 28px;
+  border: none;
+  border-radius: 50px;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+  letter-spacing: 1px;
+}
+
+.btn-draw {
+  background: linear-gradient(135deg, #5a9a6e, #3d7a52);
+  color: white;
+  box-shadow: 0 4px 0 #2d5a3e, 0 6px 16px rgba(58,122,82,0.35);
+}
+
+.btn-draw:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 0 #2d5a3e, 0 10px 20px rgba(58,122,82,0.4);
+}
+
+.btn-draw:active:not(:disabled) {
+  transform: translateY(2px);
+  box-shadow: 0 2px 0 #2d5a3e;
+}
+
+.btn-draw:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.btn-auto {
+  background: linear-gradient(135deg, #d4891a, #b86e10);
+  color: white;
+  box-shadow: 0 4px 0 #8b500c, 0 6px 16px rgba(184,110,16,0.35);
+}
+
+.btn-auto:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 0 #8b500c, 0 10px 20px rgba(184,110,16,0.4);
+}
+
+.btn-auto:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.btn-reset {
+  background: linear-gradient(135deg, #e8d5a3, #d4b87a);
+  color: #5a3d1a;
+  box-shadow: 0 4px 0 #a88040, 0 6px 16px rgba(168,128,64,0.3);
+}
+
+.btn-reset:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 0 #a88040, 0 10px 20px rgba(168,128,64,0.35);
+}
+
+.btn-sound {
+  background: linear-gradient(135deg, #7bb8d0, #5a9ab8);
+  color: white;
+  padding: 12px 18px;
+  font-size: 18px;
+  box-shadow: 0 4px 0 #3a7a98, 0 6px 16px rgba(90,154,184,0.3);
+}
+
+.btn-sound:hover {
+  transform: translateY(-2px);
+}
+
+/* ===== STATUS ===== */
+.status-bar {
+  background: rgba(255,255,255,0.55);
+  border-radius: 20px;
+  padding: 6px 20px;
+  font-size: 12px;
+  letter-spacing: 1px;
+  color: var(--grass2);
+  margin-bottom: 16px;
+  border: 1px solid rgba(122,160,100,0.3);
+  backdrop-filter: blur(4px);
+}
+
+/* ===== DRAWN NUMBERS ===== */
+.drawn-section {
+  width: 100%;
+  max-width: 840px;
+  margin-bottom: 18px;
+}
+
+.section-title {
+  font-family: 'Zen Maru Gothic', sans-serif;
+  font-size: 12px;
+  letter-spacing: 3px;
+  color: var(--grass2);
+  text-align: center;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.section-title::before, .section-title::after {
+  content: '';
+  flex: 1;
+  max-width: 80px;
+  height: 1px;
+  background: linear-gradient(to right, transparent, rgba(74,124,89,0.4));
+}
+.section-title::after { background: linear-gradient(to left, transparent, rgba(74,124,89,0.4)); }
+
+.drawn-scroll {
+  background: rgba(255,255,255,0.5);
+  border-radius: 16px;
+  padding: 14px;
+  min-height: 56px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid rgba(122,160,100,0.3);
+  backdrop-filter: blur(8px);
+  box-shadow: inset 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.drawn-chip {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Zen Maru Gothic', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  animation: chipIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  position: relative;
+}
+
+.drawn-chip.new-chip {
+  background: radial-gradient(circle at 35% 30%, #ffe066, #d4a017);
+  color: #5a3d1a;
+  box-shadow: 0 3px 8px rgba(212,160,23,0.5), 0 0 0 2px rgba(212,160,23,0.3);
+}
+
+.drawn-chip.old-chip {
+  background: radial-gradient(circle at 35% 30%, #7daa6e, #5a8a4a);
+  color: white;
+  box-shadow: 0 2px 6px rgba(74,124,89,0.35);
+}
+
+@keyframes chipIn {
+  from { transform: scale(0) rotate(-20deg); opacity: 0; }
+  to   { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+
+/* ===== NUMBER CHECKER ===== */
+.checker-area {
+  width: 100%;
+  max-width: 420px;
+  margin-bottom: 20px;
+}
+
+.checker-paper {
+  background: var(--cream);
+  border-radius: 20px;
+  padding: 22px 24px;
+  box-shadow: 0 8px 32px var(--shadow), inset 0 1px 0 rgba(255,255,255,0.9);
+  border: 3px solid rgba(180,220,160,0.7);
+  text-align: center;
+}
+
+.checker-title {
+  font-family: 'Zen Maru Gothic', sans-serif;
+  font-size: 13px;
+  letter-spacing: 2px;
+  color: var(--grass2);
+  margin-bottom: 14px;
+}
+
+.checker-input-row {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.checker-input {
+  width: 100px;
+  height: 54px;
+  border-radius: 14px;
+  border: 2.5px solid rgba(122,160,100,0.5);
+  background: white;
+  font-family: 'Zen Maru Gothic', sans-serif;
+  font-size: 28px;
+  font-weight: 900;
+  text-align: center;
+  color: var(--leaf);
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.checker-input:focus {
+  border-color: var(--grass);
+  box-shadow: 0 0 0 3px rgba(122,160,100,0.2);
+}
+
+.btn-check {
+  font-family: 'Zen Maru Gothic', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  padding: 14px 22px;
+  border: none;
+  border-radius: 50px;
+  cursor: pointer;
+  background: linear-gradient(135deg, #5a9a6e, #3d7a52);
+  color: white;
+  box-shadow: 0 4px 0 #2d5a3e, 0 6px 16px rgba(58,122,82,0.35);
+  transition: all 0.2s;
+  letter-spacing: 1px;
+}
+
+.btn-check:hover { transform: translateY(-2px); }
+.btn-check:active { transform: translateY(2px); box-shadow: 0 2px 0 #2d5a3e; }
+
+.checker-result {
+  min-height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.result-hit {
+  font-family: 'Zen Maru Gothic', sans-serif;
+  font-size: 28px;
+  font-weight: 900;
+  color: var(--leaf);
+  animation: numPop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.result-miss {
+  font-family: 'Zen Maru Gothic', sans-serif;
+  font-size: 22px;
+  font-weight: 700;
+  color: #a05a3a;
+  animation: numPop 0.4s ease;
+}
+
+.result-sub {
+  font-size: 11px;
+  color: rgba(74,124,89,0.6);
+  letter-spacing: 1px;
+}
+
+/* ===== ALL NUMBERS GRID ===== */
+.all-grid-section {
+  width: 100%;
+  max-width: 840px;
+}
+
+.all-grid {
+  display: grid;
+  grid-template-columns: repeat(10, 1fr);
+  gap: 3px;
+  background: rgba(255,255,255,0.4);
+  border-radius: 14px;
+  padding: 12px;
+  border: 2px solid rgba(122,160,100,0.25);
+  backdrop-filter: blur(6px);
+}
+
+.n-ball {
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Zen Maru Gothic', sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  border-radius: 8px;
+  color: rgba(74,124,89,0.4);
+  background: rgba(255,255,255,0.3);
+  transition: all 0.4s;
+}
+
+.n-ball.hit {
+  background: radial-gradient(circle at 35% 25%, #a8d870, #5a8a4a);
+  color: white;
+  font-weight: 700;
+  box-shadow: 0 2px 6px rgba(74,124,89,0.4);
+  transform: scale(1.05);
+}
+
+
+
+/* Confetti canvas */
+#confettiCanvas {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 490;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+#confettiCanvas.show { opacity: 1; }
+
+/* Tree decorations */
+.tree-deco {
+  position: fixed;
+  bottom: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.tree-deco.left  { left: 0; }
+.tree-deco.right { right: 0; transform: scaleX(-1); }
+
+/* Sound wave indicator */
+.sound-wave {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.sound-wave span {
+  display: block;
+  width: 3px;
+  background: white;
+  border-radius: 3px;
+  animation: wave 0.8s ease-in-out infinite;
+}
+
+.sound-wave span:nth-child(1) { height: 6px; animation-delay: 0s; }
+.sound-wave span:nth-child(2) { height: 10px; animation-delay: 0.1s; }
+.sound-wave span:nth-child(3) { height: 14px; animation-delay: 0.2s; }
+.sound-wave span:nth-child(4) { height: 10px; animation-delay: 0.3s; }
+.sound-wave span:nth-child(5) { height: 6px; animation-delay: 0.4s; }
+
+.sound-wave.muted span { animation: none; height: 4px; background: rgba(255,255,255,0.4); }
+
+@keyframes wave {
+  0%, 100% { transform: scaleY(0.5); }
+  50%       { transform: scaleY(1); }
+}
+
+@media (max-width: 500px) {
+  .title-main { font-size: 36px; }
+  .num-big { font-size: 48px; }
+  .num-display-card { width: 110px; height: 110px; }
+  .all-grid { grid-template-columns: repeat(8, 1fr); }
+  .modal-bingo { font-size: 48px; }
+  .modal-box { padding: 28px 28px; }
+}
+</style>
+</head>
+<body>
+
+<!-- Backgrounds -->
+<div class="sky-bg"></div>
+
+<!-- Animated clouds -->
+<div class="cloud-layer" id="cloudLayer"></div>
+
+<!-- Ground / grass -->
+<div class="ground">
+<svg class="grass-wave" viewBox="0 0 1440 200" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="M0,80 C120,40 240,120 360,80 C480,40 600,100 720,70 C840,40 960,110 1080,80 C1200,50 1320,90 1440,70 L1440,200 L0,200 Z" fill="#7daa6e"/>
+  <path d="M0,100 C180,60 360,130 540,100 C720,70 900,120 1080,95 C1260,70 1380,100 1440,90 L1440,200 L0,200 Z" fill="#5a8a4a" opacity="0.7"/>
+  <!-- Grass blades -->
+  <g fill="#4a7a3a" opacity="0.6">
+    <path d="M50,100 Q52,70 54,100 Z M150,95 Q153,68 156,95 Z M280,98 Q282,72 285,98 Z M420,92 Q424,65 428,92 Z M560,96 Q563,70 567,96 Z M700,93 Q703,67 706,93 Z M850,97 Q853,71 857,97 Z M980,94 Q983,68 986,94 Z M1100,96 Q1103,70 1106,96 Z M1250,95 Q1253,69 1256,95 Z M1380,93 Q1383,67 1386,93 Z"/>
+  </g>
+  <!-- Flowers -->
+  <g>
+    <circle cx="80" cy="105" r="4" fill="#f8d7e3"/>
+    <circle cx="200" cy="100" r="3.5" fill="#ffe066"/>
+    <circle cx="350" cy="103" r="4" fill="#f8d7e3"/>
+    <circle cx="500" cy="99" r="3" fill="#ffffff"/>
+    <circle cx="650" cy="102" r="4" fill="#ffe066"/>
+    <circle cx="800" cy="100" r="3.5" fill="#f8d7e3"/>
+    <circle cx="950" cy="104" r="4" fill="#ffe066"/>
+    <circle cx="1100" cy="101" r="3" fill="#ffffff"/>
+    <circle cx="1300" cy="103" r="4" fill="#f8d7e3"/>
+  </g>
+</svg>
+</div>
+
+<!-- Soot sprites container -->
+<div class="soot-container" id="sootContainer"></div>
+
+<!-- Floating leaves -->
+<div id="leafContainer" style="position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden;"></div>
+
+<!-- Tree decorations -->
+<svg class="tree-deco left" width="120" height="260" viewBox="0 0 120 260" xmlns="http://www.w3.org/2000/svg">
+  <rect x="50" y="180" width="20" height="80" fill="#8b6347" rx="3"/>
+  <ellipse cx="60" cy="140" rx="55" ry="70" fill="#4a7c59" opacity="0.9"/>
+  <ellipse cx="60" cy="110" rx="42" ry="55" fill="#5a9a6e" opacity="0.9"/>
+  <ellipse cx="60" cy="85" rx="30" ry="40" fill="#7daa6e"/>
+</svg>
+
+<svg class="tree-deco right" width="90" height="200" viewBox="0 0 90 200" xmlns="http://www.w3.org/2000/svg">
+  <rect x="35" y="140" width="15" height="60" fill="#8b6347" rx="3"/>
+  <ellipse cx="42" cy="105" rx="40" ry="55" fill="#4a7c59" opacity="0.85"/>
+  <ellipse cx="42" cy="80" rx="30" ry="42" fill="#5a9a6e"/>
+  <ellipse cx="42" cy="58" rx="22" ry="32" fill="#7daa6e"/>
+</svg>
+
+<!-- Confetti canvas -->
+<canvas id="confettiCanvas"></canvas>
+
+
+
+<!-- ===== MAIN PAGE ===== -->
+<div class="page">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-banner">
+      <div class="title-jp">もりの ビンゴ ゲーム</div>
+      <div class="title-main">BINGO</div>
+      <div class="title-sub">1〜80 · 20番号抽選 · Forest Edition</div>
+    </div>
+  </div>
+
+  <!-- Mascot row -->
+  <div class="mascot-row">
+    <!-- Mini totoro-like SVG mascot -->
+    <svg class="mascot" viewBox="0 0 64 72" xmlns="http://www.w3.org/2000/svg" onclick="mascotClick()" title="Click me!">
+      <!-- Body -->
+      <ellipse cx="32" cy="46" rx="26" ry="26" fill="#8eb8a0"/>
+      <!-- Belly -->
+      <ellipse cx="32" cy="52" rx="16" ry="18" fill="#d4e8d4"/>
+      <!-- Belly pattern -->
+      <path d="M24,48 L28,44 L32,48 L36,44 L40,48" stroke="#a0c8a0" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+      <path d="M26,54 L30,50 L34,54 L38,50" stroke="#a0c8a0" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+      <!-- Head -->
+      <ellipse cx="32" cy="26" rx="22" ry="20" fill="#8eb8a0"/>
+      <!-- Ears -->
+      <path d="M12,18 Q8,4 18,10 Z" fill="#8eb8a0"/>
+      <path d="M52,18 Q56,4 46,10 Z" fill="#8eb8a0"/>
+      <path d="M13,17 Q10,8 17,12 Z" fill="#c8e8c8"/>
+      <path d="M51,17 Q54,8 47,12 Z" fill="#c8e8c8"/>
+      <!-- Eyes -->
+      <circle cx="24" cy="24" r="5.5" fill="white"/>
+      <circle cx="40" cy="24" r="5.5" fill="white"/>
+      <circle cx="25" cy="24" r="3.5" fill="#2a4a3a"/>
+      <circle cx="41" cy="24" r="3.5" fill="#2a4a3a"/>
+      <circle cx="26" cy="22.5" r="1.5" fill="white"/>
+      <circle cx="42" cy="22.5" r="1.5" fill="white"/>
+      <!-- Nose -->
+      <ellipse cx="32" cy="31" rx="3" ry="2" fill="#5a3a6a" opacity="0.8"/>
+      <!-- Whiskers -->
+      <line x1="16" y1="30" x2="28" y2="31" stroke="#5a3a6a" stroke-width="1" opacity="0.5"/>
+      <line x1="16" y1="33" x2="28" y2="33" stroke="#5a3a6a" stroke-width="1" opacity="0.5"/>
+      <line x1="36" y1="31" x2="48" y2="30" stroke="#5a3a6a" stroke-width="1" opacity="0.5"/>
+      <line x1="36" y1="33" x2="48" y2="33" stroke="#5a3a6a" stroke-width="1" opacity="0.5"/>
+      <!-- Arms -->
+      <path d="M8,46 Q4,50 8,56 Q14,52 12,46 Z" fill="#8eb8a0"/>
+      <path d="M56,46 Q60,50 56,56 Q50,52 52,46 Z" fill="#8eb8a0"/>
+      <!-- Leaf on head -->
+      <path d="M28,6 Q32,0 36,6 Q32,10 28,6 Z" fill="#4a9a5a"/>
+    </svg>
+  </div>
+
+  <!-- Current Number Display -->
+  <div class="num-display-wrap">
+    <div class="num-display-card">
+      <div class="num-label">ばんごう / NUMBER</div>
+      <div class="num-big" id="numBig">—</div>
+      <div class="num-subtitle" id="numSub">待機中...</div>
+    </div>
+    <div class="sparkles" id="sparkleRing"></div>
+  </div>
+
+  <!-- Controls -->
+  <div class="controls">
+    <button class="btn btn-draw" id="drawBtn" onclick="drawNumber()">🍀 抽選 DRAW</button>
+    <button class="btn btn-auto" id="autoBtn" onclick="toggleAuto()">🌀 自動 AUTO</button>
+    <button class="btn btn-reset" onclick="resetGame()">🌱 リセット</button>
+    <button class="btn btn-sound" id="soundBtn" onclick="toggleSound()" title="Sound On/Off">
+      <div class="sound-wave" id="soundWave">
+        <span></span><span></span><span></span><span></span><span></span>
+      </div>
+    </button>
+  </div>
+
+  <!-- Status -->
+  <div class="status-bar" id="statusBar">🌿 0 / 20 番号抽選済み · ゲームを始めよう！</div>
+
+  <!-- Drawn numbers -->
+  <div class="drawn-section">
+    <div class="section-title">🌸 抽選済み番号 · DRAWN 🌸</div>
+    <div class="drawn-scroll" id="drawnScroll"></div>
+  </div>
+
+  <!-- Number Checker -->
+  <div class="checker-area">
+    <div class="section-title">🍀 號碼查詢 · CHECK YOUR NUMBER 🍀</div>
+    <div class="checker-paper">
+      <div class="checker-title">輸入 1〜80 的號碼，看看有沒有中！</div>
+      <div class="checker-input-row">
+        <input class="checker-input" type="number" id="checkerInput" min="1" max="80" placeholder="?" />
+        <button class="btn-check" onclick="checkNumber()">確認 CHECK</button>
+      </div>
+      <div class="checker-result" id="checkerResult">
+        <div style="font-size:13px;color:rgba(74,124,89,0.4);letter-spacing:1px;">待機中...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- All numbers -->
+  <div class="all-grid-section">
+    <div class="section-title">🌿 全番号 · ALL NUMBERS (1〜80) 🌿</div>
+    <div class="all-grid" id="allGrid"></div>
+  </div>
+
+</div><!-- /page -->
+
+<script>
+// ============================================================
+//  SOUND ENGINE  (Web Audio API)
+// ============================================================
+let audioCtx = null;
+let soundOn = true;
+
+function getCtx() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return audioCtx;
+}
+
+function playTone(freq, type, duration, volume=0.3, delay=0) {
+  if (!soundOn) return;
+  const ctx = getCtx();
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  osc.type = type;
+  osc.frequency.setValueAtTime(freq, ctx.currentTime + delay);
+  gain.gain.setValueAtTime(0, ctx.currentTime + delay);
+  gain.gain.linearRampToValueAtTime(volume, ctx.currentTime + delay + 0.02);
+  gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + delay + duration);
+  osc.start(ctx.currentTime + delay);
+  osc.stop(ctx.currentTime + delay + duration);
+}
+
+function playChime(freq, delay=0) {
+  playTone(freq, 'sine', 1.2, 0.25, delay);
+  playTone(freq*2, 'sine', 0.8, 0.08, delay + 0.02);
+}
+
+function soundDraw(num) {
+  // Rising sparkle arpeggio based on number
+  const base = 220 + (num % 12) * 40;
+  playChime(base, 0);
+  playChime(base * 1.25, 0.1);
+  playChime(base * 1.5, 0.2);
+}
+
+function soundBingo() {
+  // Victory fanfare
+  const notes = [523, 659, 784, 1047, 784, 1047, 1319];
+  notes.forEach((n,i) => playChime(n, i * 0.13));
+  // Bass thump
+  [0, 0.26, 0.52].forEach(d => playTone(80, 'sine', 0.4, 0.4, d));
+}
+
+function soundButton() {
+  playTone(440, 'sine', 0.15, 0.15);
+  playTone(660, 'sine', 0.1, 0.1, 0.08);
+}
+
+function soundAmbient() {
+  if (!soundOn) return;
+  // Gentle forest wind — filtered noise
+  const ctx = getCtx();
+  const bufferSize = ctx.sampleRate * 2;
+  const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+  const src = ctx.createBufferSource();
+  src.buffer = buffer;
+  src.loop = true;
+  const filter = ctx.createBiquadFilter();
+  filter.type = 'bandpass';
+  filter.frequency.value = 400;
+  filter.Q.value = 0.3;
+  const gain = ctx.createGain();
+  gain.gain.value = 0.018;
+  src.connect(filter);
+  filter.connect(gain);
+  gain.connect(ctx.destination);
+  src.start();
+  setTimeout(() => {
+    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 2);
+    setTimeout(() => src.stop(), 2000);
+  }, 3000);
+  return src;
+}
+
+function toggleSound() {
+  soundOn = !soundOn;
+  const wave = document.getElementById('soundWave');
+  wave.classList.toggle('muted', !soundOn);
+  if (soundOn) soundButton();
+}
+
+// ============================================================
+//  VISUAL SETUP
+// ============================================================
+
+function createClouds() {
+  const layer = document.getElementById('cloudLayer');
+  const cloudData = [
+    {x:5, y:8, w:160, h:55},
+    {x:20, y:18, w:120, h:40},
+    {x:38, y:5, w:200, h:65},
+    {x:55, y:22, w:140, h:45},
+    {x:70, y:10, w:180, h:58},
+    {x:85, y:20, w:110, h:35},
+    // Repeat for seamless
+    {x:105, y:8, w:160, h:55},
+    {x:120, y:18, w:120, h:40},
+    {x:138, y:5, w:200, h:65},
+    {x:155, y:22, w:140, h:45},
+    {x:170, y:10, w:180, h:58},
+    {x:185, y:20, w:110, h:35},
+    {x:205, y:8, w:160, h:55},
+    {x:220, y:18, w:120, h:40},
+    {x:238, y:5, w:200, h:65},
+  ];
+  cloudData.forEach(c => {
+    const el = document.createElement('div');
+    el.className = 'cloud';
+    el.style.cssText = `left:${c.x}%;top:${c.y}%;width:${c.w}px;height:${c.h}px;`;
+    layer.appendChild(el);
+    // bumps
+    for (let i = 0; i < 3; i++) {
+      const bump = document.createElement('div');
+      bump.className = 'cloud';
+      bump.style.cssText = `
+        left:${20+i*25}%;top:${-30+i*5}%;
+        width:${c.h*0.8}px;height:${c.h*0.8}px;
+        position:absolute;
+      `;
+      el.appendChild(bump);
+    }
+  });
+}
+
+function createSootSprites() {
+  const container = document.getElementById('sootContainer');
+  for (let i = 0; i < 14; i++) {
+    const s = document.createElement('div');
+    const size = 10 + Math.random() * 18;
+    s.className = 'soot';
+    s.style.cssText = `
+      width:${size}px; height:${size}px;
+      left:${Math.random()*90}%;
+      top:${30+Math.random()*50}%;
+      --dur:${7+Math.random()*10}s;
+      --delay:${Math.random()*8}s;
+      --tx:${(Math.random()-0.5)*80}px;
+      --ty:${-50-Math.random()*80}px;
+      --tx2:${(Math.random()-0.5)*120}px;
+      --ty2:${-100-Math.random()*100}px;
+    `;
+    container.appendChild(s);
+  }
+}
+
+function createLeaves() {
+  const container = document.getElementById('leafContainer');
+  const colors = ['#5a8a4a','#7daa6e','#d4a017','#c8801a','#a84030'];
+  for (let i = 0; i < 10; i++) {
+    const l = document.createElement('div');
+    l.className = 'leaf-el';
+    const color = colors[Math.floor(Math.random()*colors.length)];
+    l.style.cssText = `
+      left:${Math.random()*100}%;
+      top:0;
+      background:${color};
+      --ldur:${10+Math.random()*14}s;
+      --ldelay:${Math.random()*12}s;
+      --lx:${(Math.random()-0.5)*120}px;
+      transform:rotate(${Math.random()*360}deg);
+    `;
+    container.appendChild(l);
+  }
+}
+
+// ============================================================
+//  GAME LOGIC
+// ============================================================
+const TOTAL = 80, DRAWS = 20;
+let pool = [], drawn = [], autoTimer = null;
+
+function shuffle(arr) {
+  for (let i = arr.length-1; i > 0; i--) {
+    const j = Math.floor(Math.random()*(i+1));
+    [arr[i],arr[j]] = [arr[j],arr[i]];
+  }
+  return arr;
+}
+
+function renderAllGrid() {
+  const g = document.getElementById('allGrid');
+  g.innerHTML = '';
+  for (let i = 1; i <= TOTAL; i++) {
+    const b = document.createElement('div');
+    b.className = 'n-ball';
+    b.id = 'ball'+i;
+    b.textContent = i;
+    g.appendChild(b);
+  }
+}
+
+function spawnSparkles() {
+  const ring = document.getElementById('sparkleRing');
+  ring.innerHTML = '';
+  const colors = ['#d4a017','#c44b2b','#4a7c59','#7bb8d0','#f8d7e3'];
+  for (let i = 0; i < 10; i++) {
+    const s = document.createElement('div');
+    s.className = 'sparkle';
+    const angle = (i/10)*360;
+    const dist = 55 + Math.random()*20;
+    const sx = Math.cos(angle*Math.PI/180)*dist;
+    const sy = Math.sin(angle*Math.PI/180)*dist - 20;
+    s.style.cssText = `
+      left:calc(50% - 4px + ${sx/2}px);
+      top:calc(50% - 4px + ${sy/2}px);
+      background:${colors[i%colors.length]};
+      --sx:${sx}px; --sy:${sy}px;
+    `;
+    ring.appendChild(s);
+    requestAnimationFrame(() => s.classList.add('active'));
+  }
+}
+
+function checkNumber() {
+  const input = document.getElementById('checkerInput');
+  const result = document.getElementById('checkerResult');
+  const num = parseInt(input.value);
+
+  if (!num || num < 1 || num > 80) {
+    result.innerHTML = `<div class="result-miss">⚠️ 請輸入 1〜80 的號碼</div>`;
+    return;
+  }
+
+  soundButton();
+
+  if (drawn.length === 0) {
+    result.innerHTML = `<div class="result-miss">🌿 還沒開始抽號碼喔！</div>`;
+    return;
+  }
+
+  if (drawn.includes(num)) {
+    spawnSparkles();
+    soundBingo();
+    startConfetti();
+    setTimeout(() => stopConfetti(), 4000);
+    result.innerHTML = `
+      <div class="result-hit">🎉 中了！號碼 ${num} 有出現！</div>
+      <div class="result-sub">第 ${drawn.indexOf(num)+1} 個被抽出 ✨</div>
+    `;
+    // highlight in all-grid
+    const ball = document.getElementById('ball'+num);
+    if (ball) {
+      ball.style.outline = '3px solid #d4a017';
+      ball.style.outlineOffset = '2px';
+    }
+  } else {
+    playTone(200, 'sine', 0.4, 0.2);
+    result.innerHTML = `
+      <div class="result-miss">😢 沒中... 號碼 ${num} 未出現</div>
+      <div class="result-sub">共抽了 ${drawn.length} 個號碼</div>
+    `;
+  }
+}
+
+function drawNumber() {
+  if (pool.length === 0 || drawn.length >= DRAWS) { stopAuto(); return; }
+  soundButton();
+  const num = pool.pop();
+  drawn.push(num);
+
+  const big = document.getElementById('numBig');
+  big.textContent = num;
+  big.classList.remove('pop');
+  void big.offsetWidth;
+  big.classList.add('pop');
+  document.getElementById('numSub').textContent = `${drawn.length}番目 / ${DRAWS}番`;
+
+  spawnSparkles();
+  setTimeout(() => soundDraw(num), 50);
+
+  const scroll = document.getElementById('drawnScroll');
+  scroll.querySelectorAll('.drawn-chip').forEach(c => {
+    c.classList.remove('new-chip');
+    c.classList.add('old-chip');
+  });
+  const chip = document.createElement('div');
+  chip.className = 'drawn-chip new-chip';
+  chip.textContent = num;
+  scroll.appendChild(chip);
+  chip.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+  document.getElementById('ball'+num)?.classList.add('hit');
+
+  const rem = DRAWS - drawn.length;
+  const statusEl = document.getElementById('statusBar');
+  if (drawn.length >= DRAWS) {
+    statusEl.textContent = '✨ 全20番号の抽選が完了しました！お疲れ様！';
+    document.getElementById('drawBtn').disabled = true;
+    document.getElementById('autoBtn').disabled = true;
+    stopAuto();
+  } else {
+    statusEl.textContent = `🌿 ${drawn.length} / ${DRAWS} 番号抽選済み · 残り ${rem} 番号`;
+  }
+
+  // Re-check if user already typed a number
+  const inputVal = parseInt(document.getElementById('checkerInput').value);
+  if (inputVal && inputVal === num) {
+    setTimeout(() => checkNumber(), 300);
+  }
+}
+
+function toggleAuto() {
+  if (autoTimer) {
+    stopAuto();
+  } else {
+    soundButton();
+    const btn = document.getElementById('autoBtn');
+    btn.textContent = '⏸ 停止 STOP';
+    autoTimer = setInterval(() => {
+      if (drawn.length >= DRAWS) { stopAuto(); return; }
+      drawNumber();
+    }, 1800);
+  }
+}
+
+function stopAuto() {
+  clearInterval(autoTimer);
+  autoTimer = null;
+  const btn = document.getElementById('autoBtn');
+  if (btn) btn.textContent = '🌀 自動 AUTO';
+}
+
+function resetGame() {
+  soundButton();
+  stopAuto();
+  pool = shuffle([...Array(TOTAL)].map((_,i)=>i+1));
+  drawn = [];
+  document.getElementById('numBig').textContent = '—';
+  document.getElementById('numSub').textContent = '待機中...';
+  document.getElementById('drawnScroll').innerHTML = '';
+  document.getElementById('statusBar').textContent = '🌿 0 / 20 番号抽選済み · ゲームを始めよう！';
+  document.getElementById('drawBtn').disabled = false;
+  document.getElementById('autoBtn').disabled = false;
+  document.getElementById('checkerInput').value = '';
+  document.getElementById('checkerResult').innerHTML = `<div style="font-size:13px;color:rgba(74,124,89,0.4);letter-spacing:1px;">待機中...</div>`;
+  renderAllGrid();
+  stopConfetti();
+}
+
+function mascotClick() {
+  soundButton();
+  const mascot = document.querySelector('.mascot');
+  mascot.style.animation = 'none';
+  void mascot.offsetWidth;
+  mascot.style.animation = '';
+  spawnSparkles();
+  [523,659,784,659,523].forEach((f,i) => playChime(f, i*0.12));
+}
+
+// Enter key on input
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('checkerInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') checkNumber();
+  });
+});
+
+// ============================================================
+//  CONFETTI
+// ============================================================
+let confettiAnim = null;
+const confettiPieces = [];
+
+function startConfetti() {
+  const canvas = document.getElementById('confettiCanvas');
+  canvas.classList.add('show');
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  const ctx = canvas.getContext('2d');
+  confettiPieces.length = 0;
+
+  const colors = ['#7daa6e','#d4a017','#c44b2b','#7bb8d0','#f8d7e3','#4a7c59','#ffe066'];
+  for (let i = 0; i < 120; i++) {
+    confettiPieces.push({
+      x: Math.random()*canvas.width,
+      y: -20 - Math.random()*200,
+      w: 6 + Math.random()*10,
+      h: 5 + Math.random()*8,
+      color: colors[Math.floor(Math.random()*colors.length)],
+      vx: (Math.random()-0.5)*4,
+      vy: 2 + Math.random()*4,
+      rot: Math.random()*360,
+      vr: (Math.random()-0.5)*8,
+      shape: Math.random() > 0.5 ? 'rect' : 'circle'
+    });
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    let alive = false;
+    confettiPieces.forEach(p => {
+      p.x += p.vx;
+      p.y += p.vy;
+      p.vy += 0.05; // gravity
+      p.rot += p.vr;
+      if (p.y < canvas.height + 20) alive = true;
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.rot * Math.PI/180);
+      ctx.fillStyle = p.color;
+      if (p.shape === 'circle') {
+        ctx.beginPath();
+        ctx.arc(0, 0, p.w/2, 0, Math.PI*2);
+        ctx.fill();
+      } else {
+        ctx.fillRect(-p.w/2, -p.h/2, p.w, p.h);
+      }
+      ctx.restore();
+    });
+    if (alive) confettiAnim = requestAnimationFrame(draw);
+    else stopConfetti();
+  }
+  confettiAnim = requestAnimationFrame(draw);
+}
+
+function stopConfetti() {
+  if (confettiAnim) cancelAnimationFrame(confettiAnim);
+  const canvas = document.getElementById('confettiCanvas');
+  canvas.classList.remove('show');
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+}
+
+// ============================================================
+//  INIT
+// ============================================================
+createClouds();
+createSootSprites();
+createLeaves();
+resetGame();
+
+// Resize confetti canvas
+window.addEventListener('resize', () => {
+  const c = document.getElementById('confettiCanvas');
+  c.width = window.innerWidth;
+  c.height = window.innerHeight;
+});
+</script>
+
+<!-- ══ QR Code 懸浮元件 ══ -->
+<style>
+  #qr-fab {
+    position: fixed;
+    bottom: 1.5rem;
+    right: 1.5rem;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.6rem;
+    font-family: 'Noto Sans TC', sans-serif;
+  }
+  #qr-panel {
+    background: #1a2035;
+    border: 1px solid #2a3350;
+    border-radius: 16px;
+    padding: 1.4rem 1.4rem 1rem;
+    text-align: center;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.7rem;
+    min-width: 190px;
+    animation: qrFadeIn 0.2s ease;
+  }
+  #qr-panel.open { display: flex; }
+  @keyframes qrFadeIn {
+    from { opacity:0; transform: translateY(10px) scale(0.96); }
+    to   { opacity:1; transform: translateY(0)   scale(1);    }
+  }
+  #qr-panel-title {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #e8eaf2;
+    line-height: 1.4;
+    max-width: 170px;
+  }
+  #qr-panel img {
+    width: 160px; height: 160px;
+    background: #fff;
+    border-radius: 10px;
+    padding: 6px;
+    display: block;
+  }
+  #qr-panel-url {
+    font-size: 0.58rem;
+    color: #7a8099;
+    word-break: break-all;
+    max-width: 170px;
+    line-height: 1.4;
+    font-family: monospace;
+  }
+  #qr-panel-close {
+    font-size: 0.72rem;
+    color: #7a8099;
+    background: none;
+    border: 1px solid #2a3350;
+    border-radius: 100px;
+    padding: 0.2rem 0.8rem;
+    cursor: pointer;
+    transition: color 0.15s;
+  }
+  #qr-panel-close:hover { color: #e8eaf2; }
+  #qr-toggle-btn {
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #00c9a7, #7c6ded);
+    border: none;
+    font-size: 1.4rem;
+    cursor: pointer;
+    box-shadow: 0 4px 20px rgba(0,201,167,0.4);
+    transition: transform 0.2s, box-shadow 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  #qr-toggle-btn:hover {
+    transform: scale(1.1);
+    box-shadow: 0 6px 28px rgba(0,201,167,0.6);
+  }
+</style>
+
+<div id="qr-fab">
+  <div id="qr-panel">
+    <div id="qr-panel-title">BINGO 一星 森の遊戲</div>
+    <img src="https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=https%3A%2F%2Fcwmps.github.io%2Fmath%2Fprobability%2Fbingo-1star.html"
+         alt="QR Code" loading="lazy" />
+    <div id="qr-panel-url">https://cwmps.github.io/math/probability/bingo-1star.html</div>
+    <button id="qr-panel-close" onclick="toggleQR()">關閉</button>
+  </div>
+  <button id="qr-toggle-btn" onclick="toggleQR()" title="掃描 QR Code">📱</button>
+</div>
+
+<script>
+  function toggleQR() {
+    const p = document.getElementById('qr-panel');
+    p.classList.toggle('open');
+  }
+  // 點擊外部關閉
+  document.addEventListener('click', function(e) {
+    const fab = document.getElementById('qr-fab');
+    if (fab && !fab.contains(e.target)) {
+      document.getElementById('qr-panel').classList.remove('open');
+    }
+  });
+</script>
+
+</body>
+</html>
