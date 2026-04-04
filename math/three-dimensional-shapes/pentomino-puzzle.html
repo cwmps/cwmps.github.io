@@ -1,0 +1,1372 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>五連方 Pentominoes — 趣味數學拼圖遊戲</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;600;700;900&display=swap');
+
+  :root {
+    --bg: #0f1525;
+    --card: #1a2035;
+    --border: #2a3350;
+    --text: #e8eaf2;
+    --sub: #7a8099;
+    --accent: #00c9a7;
+    --accent2: #7c6ded;
+    --danger: #ff6b6b;
+    --warn: #ffd166;
+    --cell: 42px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Noto Sans TC', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── Header ── */
+  .hero {
+    text-align: center;
+    padding: 2.5rem 1rem 1.5rem;
+    background: linear-gradient(135deg, #0f1525 0%, #1a2840 50%, #0f1525 100%);
+    border-bottom: 1px solid var(--border);
+  }
+  .hero h1 {
+    font-size: 2.2rem;
+    font-weight: 900;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .hero p { color: var(--sub); margin-top: 0.5rem; font-size: 0.95rem; }
+
+  /* ── Tab navigation ── */
+  .tabs {
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 1rem;
+    flex-wrap: wrap;
+  }
+  .tab-btn {
+    padding: 0.5rem 1.2rem;
+    border-radius: 100px;
+    border: 1px solid var(--border);
+    background: var(--card);
+    color: var(--sub);
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .tab-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .tab-btn.active {
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: #fff;
+    border-color: transparent;
+  }
+
+  /* ── Sections ── */
+  .section { display: none; padding: 1rem; max-width: 900px; margin: 0 auto; }
+  .section.active { display: block; }
+
+  /* ── Mode 1: Pentomino Reference ── */
+  .pento-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 1rem;
+    margin-top: 1rem;
+  }
+  .pento-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 1.2rem;
+    text-align: center;
+    transition: transform 0.2s, box-shadow 0.2s;
+    cursor: default;
+  }
+  .pento-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 30px rgba(0,201,167,0.15);
+  }
+  .pento-letter {
+    font-size: 1.6rem;
+    font-weight: 900;
+    margin-bottom: 0.5rem;
+  }
+  .mini-grid {
+    display: inline-grid;
+    gap: 2px;
+    margin: 0.5rem auto;
+  }
+  .mini-cell {
+    width: 22px;
+    height: 22px;
+    border-radius: 3px;
+  }
+  .pento-area {
+    font-size: 0.78rem;
+    color: var(--sub);
+    margin-top: 0.4rem;
+  }
+
+  /* ── Mode 2: Puzzle Board ── */
+  .puzzle-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.8rem;
+    margin-bottom: 1rem;
+  }
+  .puzzle-header h2 { font-size: 1.3rem; }
+  .puzzle-controls { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+
+  .btn {
+    padding: 0.45rem 1rem;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--card);
+    color: var(--text);
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn:hover { border-color: var(--accent); color: var(--accent); }
+  .btn.accent {
+    background: linear-gradient(135deg, var(--accent), #00b894);
+    border-color: transparent;
+    color: #fff;
+  }
+  .btn.accent:hover { opacity: 0.9; }
+  .btn.danger { border-color: var(--danger); color: var(--danger); }
+  .btn.danger:hover { background: var(--danger); color: #fff; }
+
+  .board-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2rem;
+    justify-content: center;
+    align-items: flex-start;
+  }
+
+  .board-wrap { text-align: center; }
+  .board-wrap h3 {
+    font-size: 0.95rem;
+    color: var(--sub);
+    margin-bottom: 0.8rem;
+  }
+
+  #puzzle-board {
+    display: inline-grid;
+    gap: 1px;
+    background: var(--border);
+    border: 2px solid var(--border);
+    border-radius: 8px;
+    padding: 1px;
+  }
+  .board-cell {
+    width: var(--cell);
+    height: var(--cell);
+    background: #1e2740;
+    border-radius: 3px;
+    transition: background 0.15s;
+    cursor: pointer;
+  }
+  .board-cell:hover { background: #2a3555; }
+  .board-cell.filled { border-radius: 3px; }
+
+  /* ── Piece Palette ── */
+  .palette {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.8rem;
+    justify-content: center;
+    margin-top: 1rem;
+    padding: 1rem;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+  }
+  .palette-piece {
+    display: inline-grid;
+    gap: 1px;
+    padding: 6px;
+    border-radius: 8px;
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+  }
+  .palette-piece:hover { border-color: var(--accent); transform: scale(1.05); }
+  .palette-piece.selected { border-color: var(--warn); box-shadow: 0 0 16px rgba(255,209,102,0.3); }
+  .palette-piece.used { opacity: 0.25; pointer-events: none; }
+  .palette-cell {
+    width: 20px;
+    height: 20px;
+    border-radius: 2px;
+  }
+  .palette-label {
+    position: absolute;
+    top: -8px;
+    right: -4px;
+    font-size: 0.65rem;
+    font-weight: 700;
+    background: var(--card);
+    color: var(--sub);
+    padding: 0 4px;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+  }
+
+  /* ── Piece Preview Panel ── */
+  .piece-panel {
+    margin-top: 1rem;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 1rem;
+  }
+  .piece-panel-inner {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+  }
+  .piece-panel-empty {
+    text-align: center;
+    color: var(--sub);
+    font-size: 0.9rem;
+    padding: 1rem;
+  }
+  .preview-area {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .preview-label {
+    font-size: 0.85rem;
+    color: var(--sub);
+    font-weight: 600;
+  }
+  .preview-letter {
+    font-size: 1.5rem;
+    font-weight: 900;
+  }
+  .preview-grid {
+    display: inline-grid;
+    gap: 2px;
+    padding: 8px;
+    background: #0f1525;
+    border-radius: 10px;
+    border: 2px solid var(--border);
+    transition: all 0.2s ease;
+  }
+  .preview-cell {
+    width: 30px;
+    height: 30px;
+    border-radius: 3px;
+    transition: background 0.15s;
+  }
+  .transform-btns {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .transform-btns .btn {
+    font-size: 1rem;
+    padding: 0.5rem 0.9rem;
+    min-width: 100px;
+  }
+
+  .rotate-bar {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: center;
+    margin-top: 0.8rem;
+    flex-wrap: wrap;
+  }
+  .rotate-bar .btn { font-size: 1.1rem; padding: 0.4rem 0.7rem; }
+
+  /* ── Mode 3: Scale quiz ── */
+  .quiz-box {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+  }
+  .quiz-box h3 {
+    color: var(--accent);
+    margin-bottom: 0.8rem;
+    font-size: 1.1rem;
+  }
+  .quiz-q {
+    margin-bottom: 0.6rem;
+    font-size: 0.95rem;
+    line-height: 1.8;
+  }
+  .quiz-q input {
+    width: 60px;
+    text-align: center;
+    background: #0f1525;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--accent);
+    font-size: 1rem;
+    font-weight: 700;
+    padding: 2px 6px;
+  }
+  .quiz-q input:focus { outline: none; border-color: var(--accent); }
+  .quiz-result {
+    margin-top: 1rem;
+    padding: 0.8rem;
+    border-radius: 10px;
+    font-weight: 600;
+    text-align: center;
+    display: none;
+  }
+  .quiz-result.correct { background: rgba(0,201,167,0.15); color: var(--accent); display: block; }
+  .quiz-result.wrong { background: rgba(255,107,107,0.15); color: var(--danger); display: block; }
+
+  /* ── Info section ── */
+  .info-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+  }
+  .info-card h3 {
+    font-size: 1.1rem;
+    color: var(--accent);
+    margin-bottom: 0.8rem;
+  }
+  .info-card p, .info-card li {
+    font-size: 0.92rem;
+    line-height: 1.8;
+    color: var(--text);
+  }
+  .info-card ul { padding-left: 1.2rem; }
+  .info-card li { margin-bottom: 0.3rem; }
+
+  .math-highlight {
+    display: inline-block;
+    background: linear-gradient(135deg, rgba(0,201,167,0.15), rgba(124,109,237,0.15));
+    padding: 0.8rem 1.2rem;
+    border-radius: 10px;
+    font-size: 1.2rem;
+    font-weight: 700;
+    margin: 0.5rem 0;
+    border-left: 3px solid var(--accent);
+  }
+
+  /* ── Score / status ── */
+  .status-bar {
+    text-align: center;
+    margin: 0.8rem 0;
+    font-size: 0.88rem;
+    color: var(--sub);
+  }
+  .status-bar span { color: var(--accent); font-weight: 700; }
+
+  /* ── Responsive ── */
+  @media (max-width: 600px) {
+    :root { --cell: 32px; }
+    .hero h1 { font-size: 1.6rem; }
+    .pento-grid { grid-template-columns: repeat(3, 1fr); }
+    .board-container { flex-direction: column; align-items: center; }
+  }
+
+  /* ── Toast ── */
+  .toast {
+    position: fixed;
+    top: 1.5rem;
+    left: 50%;
+    transform: translateX(-50%) translateY(-100px);
+    background: var(--card);
+    border: 1px solid var(--accent);
+    color: var(--text);
+    padding: 0.7rem 1.5rem;
+    border-radius: 12px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    z-index: 10000;
+    transition: transform 0.3s ease;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<!-- ══ Hero ══ -->
+<div class="hero">
+  <h1>🧩 五連方 Pentominoes</h1>
+  <p>趣味數學拼圖遊戲 — 動手拼、動腦想！</p>
+</div>
+
+<!-- ══ Tabs ══ -->
+<div class="tabs">
+  <button class="tab-btn active" onclick="switchTab('intro')">📖 認識五連方</button>
+  <button class="tab-btn" onclick="switchTab('puzzle')">🧩 拼圖遊戲</button>
+  <button class="tab-btn" onclick="switchTab('scale')">🔍 放大挑戰</button>
+  <button class="tab-btn" onclick="switchTab('quiz')">📝 數學練習</button>
+</div>
+
+<!-- ══════════════════════════════════ -->
+<!-- Section 1: 認識五連方                -->
+<!-- ══════════════════════════════════ -->
+<div id="sec-intro" class="section active">
+  <div class="info-card">
+    <h3>什麼是五連方？</h3>
+    <p>五連方（Pentominoes）是由 <strong>5 個相同大小的正方形</strong>，邊對邊連接而成的幾何圖形。</p>
+    <p>就像用 5 塊正方形積木拼在一起，但每一塊都要「邊貼邊」，不能只是「角碰角」。</p>
+    <p style="margin-top:0.8rem;">總共有 <strong style="color:var(--accent);font-size:1.3rem;">12 種</strong> 不同的五連方，分別用英文字母 F、I、L、N、P、T、U、V、W、X、Y、Z 來命名（因為形狀很像這些字母）。</p>
+  </div>
+
+  <div class="info-card">
+    <h3>重要數學概念</h3>
+    <ul>
+      <li>每片五連方的面積 = <strong>5 個小方格</strong></li>
+      <li>12 種五連方的總面積 = 12 × 5 = <strong>60 個小方格</strong></li>
+      <li>可以拼成 6×10、5×12、4×15、3×20 等矩形</li>
+      <li>旋轉、翻轉後形狀相同的算同一種</li>
+    </ul>
+    <div class="math-highlight">
+      12 片 × 5 格 = 60 格 → 可拼成多種矩形！
+    </div>
+  </div>
+
+  <h2 style="text-align:center;margin:1.5rem 0 0.5rem;font-size:1.3rem;">12 種五連方一覽</h2>
+  <div class="pento-grid" id="pento-gallery"></div>
+</div>
+
+<!-- ══════════════════════════════════ -->
+<!-- Section 2: 拼圖遊戲                 -->
+<!-- ══════════════════════════════════ -->
+<div id="sec-puzzle" class="section">
+  <div class="puzzle-header">
+    <h2>🧩 矩形拼圖挑戰</h2>
+    <div class="puzzle-controls">
+      <select id="board-size" class="btn" onchange="initBoard()">
+        <option value="6x10">6 × 10（推薦）</option>
+        <option value="5x12">5 × 12</option>
+        <option value="4x15">4 × 15</option>
+        <option value="3x20">3 × 20</option>
+      </select>
+      <button class="btn danger" onclick="clearBoard()">🗑 清除棋盤</button>
+    </div>
+  </div>
+
+  <p style="color:var(--sub);font-size:0.88rem;margin-bottom:0.5rem;">
+    目標：用全部 12 片五連方填滿整個矩形！點擊下方的五連方 → 點擊棋盤放置。
+  </p>
+
+  <div class="status-bar">
+    已使用：<span id="used-count">0</span> / 12 片
+    剩餘空格：<span id="empty-count">60</span>
+  </div>
+
+  <div class="board-container">
+    <div class="board-wrap">
+      <div id="puzzle-board"></div>
+    </div>
+  </div>
+
+  <div class="rotate-bar">
+    <button class="btn danger" onclick="undoLast()">↩️ 復原上一步</button>
+  </div>
+
+  <!-- 選取預覽 + 操作面板 -->
+  <div class="piece-panel">
+    <div id="piece-preview">
+      <div class="piece-panel-empty">👆 從下方選擇一片五連方，選好後可以旋轉、翻轉，再點棋盤放置</div>
+    </div>
+  </div>
+
+  <div class="palette" id="piece-palette"></div>
+</div>
+
+<!-- ══════════════════════════════════ -->
+<!-- Section 3: 放大挑戰                 -->
+<!-- ══════════════════════════════════ -->
+<div id="sec-scale" class="section">
+  <div class="info-card">
+    <h3>🔍 五連方放大遊戲</h3>
+    <p>從 12 片五連方中挑出 <strong>1 片</strong>當作「基準片」，再從剩下的 11 片中選出 <strong>9 片</strong>，就可以拼出基準片的 <strong>3 倍放大圖</strong>！</p>
+    <div class="math-highlight">
+      長度 × 3，面積 × 9 → 需要 9 片（45 ÷ 5 = 9）
+    </div>
+    <p style="margin-top:0.5rem;color:var(--sub);font-size:0.88rem;">構想來源：IQ大百科書籍（小益老師設計）</p>
+  </div>
+
+  <div class="info-card">
+    <h3>為什麼是 9 片？一起來推導！</h3>
+    <div style="display:grid;gap:0.5rem;margin-top:0.5rem;">
+      <div style="display:flex;align-items:center;gap:0.8rem;">
+        <span style="background:var(--accent);color:#fff;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.85rem;flex-shrink:0;">1</span>
+        <span>基準片的面積 = 5 個小方格</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:0.8rem;">
+        <span style="background:var(--accent);color:#fff;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.85rem;flex-shrink:0;">2</span>
+        <span>放大 3 倍：長度 × 3、寬度 × 3</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:0.8rem;">
+        <span style="background:var(--accent);color:#fff;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.85rem;flex-shrink:0;">3</span>
+        <span>放大後面積 = 5 × 3 × 3 = <strong style="color:var(--accent);">45 個小方格</strong></span>
+      </div>
+      <div style="display:flex;align-items:center;gap:0.8rem;">
+        <span style="background:var(--accent);color:#fff;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.85rem;flex-shrink:0;">4</span>
+        <span>每片五連方 = 5 格，所以需要 45 ÷ 5 = <strong style="color:var(--accent);">9 片</strong></span>
+      </div>
+      <div style="display:flex;align-items:center;gap:0.8rem;">
+        <span style="background:var(--warn);color:#000;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.85rem;flex-shrink:0;">★</span>
+        <span><strong>結論：長度放大 n 倍，面積放大 n² 倍！</strong></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="info-card">
+    <h3>放大挑戰 — 選一片來試試！</h3>
+    <p style="margin-bottom:0.8rem;">點選一個基準片，看看它的 3 倍放大輪廓：</p>
+    <div id="scale-picker" style="display:flex;flex-wrap:wrap;gap:0.6rem;justify-content:center;"></div>
+    <div id="scale-display" style="margin-top:1.2rem;text-align:center;"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════ -->
+<!-- Section 4: 數學練習                 -->
+<!-- ══════════════════════════════════ -->
+<div id="sec-quiz" class="section">
+  <div class="quiz-box">
+    <h3>📝 填填看 — 放大計算</h3>
+    <div class="quiz-q">1. 一片五連方的面積是 <input type="number" id="q1" min="0"> 個小方格。</div>
+    <div class="quiz-q">2. 如果將一片五連方放大 3 倍，長度變成原來的 <input type="number" id="q2" min="0"> 倍。</div>
+    <div class="quiz-q">3. 放大後的面積變成原來的 <input type="number" id="q3" min="0"> 倍，共有 <input type="number" id="q4" min="0"> 個小方格。</div>
+    <div class="quiz-q">4. 所以需要 <input type="number" id="q5" min="0"> 片五連方才能拼出放大圖。</div>
+    <div class="quiz-q">5. 如果放大 4 倍，面積會變成原來的 <input type="number" id="q6" min="0"> 倍，需要 <input type="number" id="q7" min="0"> 片。</div>
+    <button class="btn accent" onclick="checkQuiz()" style="margin-top:1rem;">✅ 檢查答案</button>
+    <div id="quiz-result" class="quiz-result"></div>
+  </div>
+
+  <div class="quiz-box">
+    <h3>🤔 動動腦 — 矩形分解</h3>
+    <p style="margin-bottom:0.8rem;">12 種五連方總共有 60 個小方格，請找出所有可以拼成的矩形（長 × 寬 = 60）：</p>
+    <div id="rect-quiz" style="display:grid;gap:0.5rem;"></div>
+    <button class="btn accent" onclick="checkRects()" style="margin-top:1rem;">✅ 檢查答案</button>
+    <div id="rect-result" class="quiz-result"></div>
+  </div>
+</div>
+
+<!-- ══ Toast ══ -->
+<div class="toast" id="toast"></div>
+
+<!-- ══ QR Code 懸浮元件 ══ -->
+<style>
+  #qr-fab {
+    position: fixed; bottom: 1.5rem; right: 1.5rem;
+    z-index: 9999; display: flex; flex-direction: column;
+    align-items: flex-end; gap: 0.6rem;
+    font-family: 'Noto Sans TC', sans-serif;
+  }
+  #qr-panel {
+    background: #1a2035; border: 1px solid #2a3350;
+    border-radius: 16px; padding: 1.4rem 1.4rem 1rem;
+    text-align: center; box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+    display: none; flex-direction: column; align-items: center;
+    gap: 0.7rem; min-width: 190px; animation: qrFadeIn 0.2s ease;
+  }
+  #qr-panel.open { display: flex; }
+  @keyframes qrFadeIn {
+    from { opacity:0; transform: translateY(10px) scale(0.96); }
+    to   { opacity:1; transform: translateY(0) scale(1); }
+  }
+  #qr-panel-title { font-size: 0.82rem; font-weight: 600; color: #e8eaf2; line-height: 1.4; max-width: 170px; }
+  #qr-panel canvas { background: #fff; border-radius: 10px; padding: 6px; display: block; }
+  #qr-panel-url { font-size: 0.58rem; color: #7a8099; word-break: break-all; max-width: 170px; line-height: 1.4; font-family: monospace; }
+  #qr-panel-close { font-size: 0.72rem; color: #7a8099; background: none; border: 1px solid #2a3350; border-radius: 100px; padding: 0.2rem 0.8rem; cursor: pointer; transition: color 0.15s; }
+  #qr-panel-close:hover { color: #e8eaf2; }
+  #qr-toggle-btn { width: 48px; height: 48px; border-radius: 50%; background: linear-gradient(135deg, #00c9a7, #7c6ded); border: none; font-size: 1.4rem; cursor: pointer; box-shadow: 0 4px 20px rgba(0,201,167,0.4); transition: transform 0.2s, box-shadow 0.2s; display: flex; align-items: center; justify-content: center; }
+  #qr-toggle-btn:hover { transform: scale(1.1); box-shadow: 0 6px 28px rgba(0,201,167,0.6); }
+</style>
+<div id="qr-fab">
+  <div id="qr-panel">
+    <div id="qr-panel-title">五連方 Pentominoes 拼圖遊戲</div>
+    <canvas id="qr-canvas" width="160" height="160"></canvas>
+    <div id="qr-panel-url">https://cwmps.github.io/math/three-dimensional-shapes/pentomino-puzzle.html</div>
+    <button id="qr-panel-close" onclick="toggleQR()">關閉</button>
+  </div>
+  <div style="display:flex;align-items:center;gap:0.5rem;">
+    <span style="font-family:monospace;font-size:0.72rem;color:#7a8099;user-select:none;">ans</span>
+    <button id="qr-toggle-btn" onclick="toggleQR()" title="掃描 QR Code">📱</button>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════
+// Pentomino Data
+// ══════════════════════════════════════════
+const PENTOMINOES = [
+  { letter:'F', color:'#3498db', grid:[[0,1,1],[1,1,0],[0,1,0]] },
+  { letter:'I', color:'#e91e63', grid:[[1,1,1,1,1]] },
+  { letter:'L', color:'#9c27b0', grid:[[1,0],[1,0],[1,0],[1,1]] },
+  { letter:'N', color:'#ff9800', grid:[[0,1],[1,1],[1,0],[1,0]] },
+  { letter:'P', color:'#4caf50', grid:[[1,1],[1,1],[1,0]] },
+  { letter:'T', color:'#f44336', grid:[[1,1,1],[0,1,0],[0,1,0]] },
+  { letter:'U', color:'#d4a017', grid:[[1,0,1],[1,1,1]] },
+  { letter:'V', color:'#00bcd4', grid:[[1,0,0],[1,0,0],[1,1,1]] },
+  { letter:'W', color:'#795548', grid:[[1,0,0],[1,1,0],[0,1,1]] },
+  { letter:'X', color:'#607d8b', grid:[[0,1,0],[1,1,1],[0,1,0]] },
+  { letter:'Y', color:'#8bc34a', grid:[[0,1],[1,1],[0,1],[0,1]] },
+  { letter:'Z', color:'#ff5722', grid:[[1,1,0],[0,1,0],[0,1,1]] },
+];
+
+// ══════════════════════════════════════════
+// Utility
+// ══════════════════════════════════════════
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+function toggleQR() { document.getElementById('qr-panel').classList.toggle('open'); }
+document.addEventListener('click', function(e) {
+  const fab = document.getElementById('qr-fab');
+  if (fab && !fab.contains(e.target)) document.getElementById('qr-panel').classList.remove('open');
+});
+
+// ══════════════════════════════════════════
+// Tab switching
+// ══════════════════════════════════════════
+function switchTab(tab) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('sec-' + tab).classList.add('active');
+  event.target.classList.add('active');
+}
+
+// ══════════════════════════════════════════
+// Section 1: Gallery
+// ══════════════════════════════════════════
+function buildGallery() {
+  const container = document.getElementById('pento-gallery');
+  PENTOMINOES.forEach(p => {
+    const card = document.createElement('div');
+    card.className = 'pento-card';
+
+    const cols = p.grid[0].length;
+    const rows = p.grid.length;
+
+    let html = `<div class="pento-letter" style="color:${p.color}">${p.letter}</div>`;
+    html += `<div class="mini-grid" style="grid-template-columns:repeat(${cols},22px);">`;
+    p.grid.forEach(row => {
+      row.forEach(cell => {
+        html += `<div class="mini-cell" style="background:${cell ? p.color : 'transparent'};${cell ? 'border:1px solid rgba(255,255,255,0.15);' : ''}"></div>`;
+      });
+    });
+    html += `</div>`;
+    html += `<div class="pento-area">面積 = 5 格</div>`;
+
+    card.innerHTML = html;
+    container.appendChild(card);
+  });
+}
+
+// ══════════════════════════════════════════
+// Section 2: Puzzle Board
+// ══════════════════════════════════════════
+let boardRows = 6, boardCols = 10;
+let board = [];
+let selectedPiece = null;
+let currentGrid = null;
+let usedPieces = new Set();
+let history = [];
+
+function initBoard() {
+  const size = document.getElementById('board-size').value;
+  [boardRows, boardCols] = size.split('x').map(Number);
+  board = Array.from({length: boardRows}, () => Array(boardCols).fill(null));
+  usedPieces = new Set();
+  selectedPiece = null;
+  currentGrid = null;
+  history = [];
+  renderBoard();
+  renderPalette();
+  renderPreview();
+  updateStatus();
+}
+
+function renderBoard() {
+  const el = document.getElementById('puzzle-board');
+  el.style.gridTemplateColumns = `repeat(${boardCols}, var(--cell))`;
+  el.innerHTML = '';
+  for (let r = 0; r < boardRows; r++) {
+    for (let c = 0; c < boardCols; c++) {
+      const cell = document.createElement('div');
+      cell.className = 'board-cell' + (board[r][c] ? ' filled' : '');
+      if (board[r][c]) {
+        const p = PENTOMINOES.find(p => p.letter === board[r][c]);
+        cell.style.background = p ? p.color : '#444';
+      }
+      cell.addEventListener('click', () => placePiece(r, c));
+      cell.addEventListener('mouseenter', () => previewPiece(r, c));
+      cell.addEventListener('mouseleave', clearPreview);
+      el.appendChild(cell);
+    }
+  }
+}
+
+function renderPalette() {
+  const el = document.getElementById('piece-palette');
+  el.innerHTML = '';
+  PENTOMINOES.forEach((p, idx) => {
+    const wrap = document.createElement('div');
+    wrap.className = 'palette-piece' + (usedPieces.has(p.letter) ? ' used' : '') + (selectedPiece === idx ? ' selected' : '');
+    const cols = p.grid[0].length;
+    wrap.style.gridTemplateColumns = `repeat(${cols}, 20px)`;
+    wrap.style.gap = '1px';
+
+    let html = `<span class="palette-label">${p.letter}</span>`;
+    p.grid.forEach(row => {
+      row.forEach(cell => {
+        html += `<div class="palette-cell" style="background:${cell ? p.color : 'transparent'}"></div>`;
+      });
+    });
+    wrap.innerHTML = html;
+    wrap.addEventListener('click', () => selectPiece(idx));
+    el.appendChild(wrap);
+  });
+}
+
+function selectPiece(idx) {
+  if (usedPieces.has(PENTOMINOES[idx].letter)) return;
+  selectedPiece = idx;
+  currentGrid = PENTOMINOES[idx].grid.map(r => [...r]);
+  renderPalette();
+  renderPreview();
+}
+
+function rotatePiece() {
+  if (!currentGrid) return;
+  const rows = currentGrid.length;
+  const cols = currentGrid[0].length;
+  const newGrid = [];
+  for (let c = 0; c < cols; c++) {
+    newGrid.push([]);
+    for (let r = rows - 1; r >= 0; r--) {
+      newGrid[c].push(currentGrid[r][c]);
+    }
+  }
+  currentGrid = newGrid;
+  renderPreview();
+}
+
+function flipPiece() {
+  if (!currentGrid) return;
+  currentGrid = currentGrid.map(r => [...r].reverse());
+  renderPreview();
+}
+
+function renderPreview() {
+  const el = document.getElementById('piece-preview');
+  if (selectedPiece === null || !currentGrid) {
+    el.innerHTML = '<div class="piece-panel-empty">👆 從下方選擇一片五連方，選好後可以旋轉、翻轉，再點棋盤放置</div>';
+    return;
+  }
+  const p = PENTOMINOES[selectedPiece];
+  const cols = currentGrid[0].length;
+  const rows = currentGrid.length;
+
+  let gridHtml = `<div class="preview-grid" style="grid-template-columns:repeat(${cols},30px);">`;
+  currentGrid.forEach(row => {
+    row.forEach(cell => {
+      gridHtml += `<div class="preview-cell" style="background:${cell ? p.color : 'transparent'};${cell ? 'border:1px solid rgba(255,255,255,0.2);' : ''}"></div>`;
+    });
+  });
+  gridHtml += '</div>';
+
+  el.innerHTML = `
+    <div class="piece-panel-inner">
+      <div class="preview-area">
+        <div class="preview-label">目前選取</div>
+        <div class="preview-letter" style="color:${p.color}">${p.letter}</div>
+        ${gridHtml}
+      </div>
+      <div class="transform-btns">
+        <button class="btn accent" onclick="rotatePiece()" title="順時針旋轉 90°">🔄 旋轉 90°</button>
+        <button class="btn accent" onclick="flipPiece()" title="水平翻轉">↔️ 水平翻轉</button>
+        <button class="btn" onclick="resetPieceRotation()" title="恢復原始方向">🔃 重置方向</button>
+      </div>
+      <div class="preview-area">
+        <div class="preview-label" style="font-size:0.78rem;color:var(--sub);">💡 操作說明</div>
+        <div style="font-size:0.8rem;color:var(--sub);line-height:1.7;text-align:left;">
+          1. 按旋轉/翻轉調整方向<br>
+          2. 點擊棋盤放置積木<br>
+          3. 滑鼠移到棋盤可預覽
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function resetPieceRotation() {
+  if (selectedPiece === null) return;
+  currentGrid = PENTOMINOES[selectedPiece].grid.map(r => [...r]);
+  renderPreview();
+}
+
+function canPlace(r, c) {
+  if (!currentGrid || selectedPiece === null) return false;
+  for (let dr = 0; dr < currentGrid.length; dr++) {
+    for (let dc = 0; dc < currentGrid[0].length; dc++) {
+      if (currentGrid[dr][dc]) {
+        const nr = r + dr, nc = c + dc;
+        if (nr < 0 || nr >= boardRows || nc < 0 || nc >= boardCols) return false;
+        if (board[nr][nc]) return false;
+      }
+    }
+  }
+  return true;
+}
+
+function placePiece(r, c) {
+  if (!canPlace(r, c)) {
+    if (selectedPiece === null) toast('請先選擇一片五連方！');
+    else toast('❌ 無法放在這裡！');
+    return;
+  }
+  const letter = PENTOMINOES[selectedPiece].letter;
+  const cells = [];
+  for (let dr = 0; dr < currentGrid.length; dr++) {
+    for (let dc = 0; dc < currentGrid[0].length; dc++) {
+      if (currentGrid[dr][dc]) {
+        board[r + dr][c + dc] = letter;
+        cells.push([r + dr, c + dc]);
+      }
+    }
+  }
+  history.push({ letter, cells });
+  usedPieces.add(letter);
+  selectedPiece = null;
+  currentGrid = null;
+  renderBoard();
+  renderPalette();
+  renderPreview();
+  updateStatus();
+
+  if (usedPieces.size === 12) {
+    const empty = board.flat().filter(c => !c).length;
+    if (empty === 0) toast('🎉 太棒了！你完成了矩形拼圖！');
+  }
+}
+
+function previewPiece(r, c) {
+  if (!currentGrid || selectedPiece === null) return;
+  const cells = document.getElementById('puzzle-board').children;
+  for (let dr = 0; dr < currentGrid.length; dr++) {
+    for (let dc = 0; dc < currentGrid[0].length; dc++) {
+      if (currentGrid[dr][dc]) {
+        const nr = r + dr, nc = c + dc;
+        if (nr >= 0 && nr < boardRows && nc >= 0 && nc < boardCols && !board[nr][nc]) {
+          const idx = nr * boardCols + nc;
+          const ok = canPlace(r, c);
+          cells[idx].style.background = ok ? PENTOMINOES[selectedPiece].color + '80' : '#ff6b6b40';
+        }
+      }
+    }
+  }
+}
+
+function clearPreview() {
+  const cells = document.getElementById('puzzle-board').children;
+  for (let r = 0; r < boardRows; r++) {
+    for (let c = 0; c < boardCols; c++) {
+      if (!board[r][c]) {
+        cells[r * boardCols + c].style.background = '#1e2740';
+      }
+    }
+  }
+}
+
+function undoLast() {
+  if (history.length === 0) { toast('沒有可以復原的步驟'); return; }
+  const last = history.pop();
+  last.cells.forEach(([r, c]) => board[r][c] = null);
+  usedPieces.delete(last.letter);
+  selectedPiece = null;
+  currentGrid = null;
+  renderBoard();
+  renderPalette();
+  renderPreview();
+  updateStatus();
+  toast('↩️ 已復原：' + last.letter);
+}
+
+function clearBoard() {
+  board = Array.from({length: boardRows}, () => Array(boardCols).fill(null));
+  usedPieces = new Set();
+  selectedPiece = null;
+  currentGrid = null;
+  history = [];
+  renderBoard();
+  renderPalette();
+  renderPreview();
+  updateStatus();
+  toast('🗑 棋盤已清除');
+}
+
+function updateStatus() {
+  document.getElementById('used-count').textContent = usedPieces.size;
+  document.getElementById('empty-count').textContent = board.flat().filter(c => !c).length;
+}
+
+// ══════════════════════════════════════════
+// Section 3: Scale Challenge
+// ══════════════════════════════════════════
+function buildScalePicker() {
+  const container = document.getElementById('scale-picker');
+  PENTOMINOES.forEach((p, idx) => {
+    const btn = document.createElement('button');
+    btn.className = 'btn';
+    btn.style.fontWeight = '700';
+    btn.style.color = p.color;
+    btn.textContent = p.letter;
+    btn.addEventListener('click', () => showScaled(idx));
+    container.appendChild(btn);
+  });
+}
+
+function showScaled(idx) {
+  const p = PENTOMINOES[idx];
+  const display = document.getElementById('scale-display');
+
+  // Scale grid 3x
+  const scaledGrid = [];
+  for (let r = 0; r < p.grid.length; r++) {
+    for (let sr = 0; sr < 3; sr++) {
+      const row = [];
+      for (let c = 0; c < p.grid[0].length; c++) {
+        for (let sc = 0; sc < 3; sc++) {
+          row.push(p.grid[r][c]);
+        }
+      }
+      scaledGrid.push(row);
+    }
+  }
+
+  const cols = scaledGrid[0].length;
+  let html = `<p style="margin-bottom:0.8rem;font-weight:600;color:${p.color};">${p.letter} 的 3 倍放大圖（需要 9 片來填滿！）</p>`;
+  html += `<div style="display:inline-grid;grid-template-columns:repeat(${cols},18px);gap:1px;">`;
+  scaledGrid.forEach(row => {
+    row.forEach(cell => {
+      html += `<div style="width:18px;height:18px;border-radius:2px;background:${cell ? p.color + '60' : 'transparent'};${cell ? 'border:1px solid ' + p.color + '90;' : ''}"></div>`;
+    });
+  });
+  html += `</div>`;
+  html += `<p style="margin-top:0.8rem;color:var(--sub);font-size:0.85rem;">原面積：5 格 → 放大後：${scaledGrid.flat().filter(c=>c).length} 格（= 9 片 × 5 格）</p>`;
+
+  display.innerHTML = html;
+}
+
+// ══════════════════════════════════════════
+// Section 4: Quiz
+// ══════════════════════════════════════════
+function checkQuiz() {
+  const answers = {q1:5, q2:3, q3:9, q4:45, q5:9, q6:16, q7:16};
+  let correct = 0;
+  let total = 7;
+
+  Object.entries(answers).forEach(([id, ans]) => {
+    const el = document.getElementById(id);
+    const val = parseInt(el.value);
+    if (val === ans) {
+      el.style.borderColor = '#00c9a7';
+      el.style.color = '#00c9a7';
+      correct++;
+    } else {
+      el.style.borderColor = '#ff6b6b';
+      el.style.color = '#ff6b6b';
+    }
+  });
+
+  const result = document.getElementById('quiz-result');
+  if (correct === total) {
+    result.className = 'quiz-result correct';
+    result.textContent = `🎉 全部正確！你答對了 ${correct}/${total} 題！`;
+  } else {
+    result.className = 'quiz-result wrong';
+    result.textContent = `答對了 ${correct}/${total} 題，再想想看錯的部分！`;
+  }
+}
+
+// Rect quiz
+function buildRectQuiz() {
+  const container = document.getElementById('rect-quiz');
+  const solutions = [[3,20],[4,15],[5,12],[6,10]];
+  for (let i = 0; i < 4; i++) {
+    const div = document.createElement('div');
+    div.className = 'quiz-q';
+    div.innerHTML = `<input type="number" id="ra${i}" min="1" style="width:50px;"> × <input type="number" id="rb${i}" min="1" style="width:50px;"> = 60`;
+    container.appendChild(div);
+  }
+}
+
+function checkRects() {
+  const solutions = new Set(['3,20','4,15','5,12','6,10','20,3','15,4','12,5','10,6']);
+  const userAnswers = new Set();
+  let allFilled = true;
+
+  for (let i = 0; i < 4; i++) {
+    const a = document.getElementById('ra' + i).value;
+    const b = document.getElementById('rb' + i).value;
+    if (!a || !b) { allFilled = false; continue; }
+    const key = `${Math.min(a,b)},${Math.max(a,b)}`;
+    if (parseInt(a) * parseInt(b) === 60 && solutions.has(`${a},${b}`)) {
+      userAnswers.add(key);
+      document.getElementById('ra' + i).style.borderColor = '#00c9a7';
+      document.getElementById('rb' + i).style.borderColor = '#00c9a7';
+    } else {
+      document.getElementById('ra' + i).style.borderColor = '#ff6b6b';
+      document.getElementById('rb' + i).style.borderColor = '#ff6b6b';
+    }
+  }
+
+  const result = document.getElementById('rect-result');
+  if (userAnswers.size === 4) {
+    result.className = 'quiz-result correct';
+    result.textContent = '🎉 太厲害了！四種矩形都找到了！';
+  } else if (userAnswers.size > 0) {
+    result.className = 'quiz-result wrong';
+    result.textContent = `找到了 ${userAnswers.size}/4 種，繼續加油！（提示：想想 60 的因數分解）`;
+  } else {
+    result.className = 'quiz-result wrong';
+    result.textContent = '再想想看！提示：60 = ? × ?（兩個數都要 ≥ 3）';
+  }
+}
+
+// 教師密碼解答觸發器：在非輸入框狀態下依序按 a → n → s
+(function() {
+  const SECRET = ['a', 'n', 's'];
+  let buf = [];
+  document.addEventListener('keydown', function(e) {
+    const tag = document.activeElement ? document.activeElement.tagName : '';
+    if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+    buf.push(e.key.toLowerCase());
+    if (buf.length > SECRET.length) buf.shift();
+    if (buf.join('') === SECRET.join('')) {
+      buf = [];
+      if (typeof solvePuzzle === 'function') solvePuzzle();
+    }
+  });
+})();
+
+function solvePuzzle() {
+  // Show answers for quiz
+  const answers = {q1:5, q2:3, q3:9, q4:45, q5:9, q6:16, q7:16};
+  Object.entries(answers).forEach(([id, val]) => {
+    document.getElementById(id).value = val;
+    document.getElementById(id).style.borderColor = '#00c9a7';
+    document.getElementById(id).style.color = '#00c9a7';
+  });
+  const rects = [[3,20],[4,15],[5,12],[6,10]];
+  rects.forEach(([a,b], i) => {
+    document.getElementById('ra'+i).value = a;
+    document.getElementById('rb'+i).value = b;
+    document.getElementById('ra'+i).style.borderColor = '#00c9a7';
+    document.getElementById('rb'+i).style.borderColor = '#00c9a7';
+  });
+  toast('🔓 教師模式：已顯示所有答案');
+}
+
+// ══════════════════════════════════════════
+// Init
+// ══════════════════════════════════════════
+buildGallery();
+initBoard();
+buildScalePicker();
+buildRectQuiz();
+
+// ══════════════════════════════════════════
+// QR Code Generator (本地生成，不依賴外部 API)
+// ══════════════════════════════════════════
+(function(){
+  // Minimal QR Code generator — supports up to ~100 char URLs (Version 3, ECC-L)
+  // Based on QR encoding spec, generates Module-25 matrix
+  const QR_URL = 'https://cwmps.github.io/math/three-dimensional-shapes/pentomino-puzzle.html';
+
+  function drawQR(canvas, url) {
+    const size = 160;
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, size, size);
+
+    // Use a pre-computed bit matrix approach
+    // Encode URL into a simple visual QR pattern using polynomial math
+    // For reliability, we use a proven minimal encoder
+
+    const modules = generateQRMatrix(url);
+    if (!modules) return;
+
+    const modCount = modules.length;
+    const padding = 8;
+    const cellSize = (size - padding * 2) / modCount;
+
+    ctx.fillStyle = '#000000';
+    for (let r = 0; r < modCount; r++) {
+      for (let c = 0; c < modCount; c++) {
+        if (modules[r][c]) {
+          ctx.fillRect(
+            padding + c * cellSize,
+            padding + r * cellSize,
+            Math.ceil(cellSize),
+            Math.ceil(cellSize)
+          );
+        }
+      }
+    }
+  }
+
+  // ── Minimal QR encoder (Version 1-4, Byte mode, ECC-L) ──
+  function generateQRMatrix(text) {
+    const data = [];
+    for (let i = 0; i < text.length; i++) data.push(text.charCodeAt(i));
+
+    // Choose version
+    let version, totalCodewords, ecCodewords, numBlocks;
+    const len = data.length;
+    if (len <= 17) { version = 1; totalCodewords = 26; ecCodewords = 7; numBlocks = 1; }
+    else if (len <= 32) { version = 2; totalCodewords = 44; ecCodewords = 10; numBlocks = 1; }
+    else if (len <= 53) { version = 3; totalCodewords = 70; ecCodewords = 15; numBlocks = 1; }
+    else if (len <= 78) { version = 4; totalCodewords = 100; ecCodewords = 20; numBlocks = 1; }
+    else { version = 5; totalCodewords = 134; ecCodewords = 26; numBlocks = 1; }
+
+    const size = version * 4 + 17;
+    const dataCodewords = totalCodewords - ecCodewords * numBlocks;
+
+    // Build bit stream: mode(4) + count(8) + data + terminator + padding
+    let bits = '';
+    bits += '0100'; // Byte mode
+    bits += len.toString(2).padStart(version >= 10 ? 16 : 8, '0');
+    for (const b of data) bits += b.toString(2).padStart(8, '0');
+    bits += '0000'; // terminator
+    while (bits.length % 8 !== 0) bits += '0';
+    while (bits.length / 8 < dataCodewords) {
+      bits += '11101100';
+      if (bits.length / 8 < dataCodewords) bits += '00010001';
+    }
+    bits = bits.substring(0, dataCodewords * 8);
+
+    const codewords = [];
+    for (let i = 0; i < bits.length; i += 8) {
+      codewords.push(parseInt(bits.substring(i, i + 8), 2));
+    }
+
+    // Reed-Solomon error correction
+    const ecWords = rsEncode(codewords, ecCodewords);
+    const allCodewords = [...codewords, ...ecWords];
+
+    // Build module matrix
+    const modules = Array.from({length: size}, () => Array(size).fill(null));
+    const isFunction = Array.from({length: size}, () => Array(size).fill(false));
+
+    // Place finder patterns
+    placeFinder(modules, isFunction, 0, 0, size);
+    placeFinder(modules, isFunction, size - 7, 0, size);
+    placeFinder(modules, isFunction, 0, size - 7, size);
+
+    // Timing patterns
+    for (let i = 8; i < size - 8; i++) {
+      setModule(modules, isFunction, 6, i, i % 2 === 0);
+      setModule(modules, isFunction, i, 6, i % 2 === 0);
+    }
+
+    // Alignment pattern (version >= 2)
+    if (version >= 2) {
+      const positions = getAlignmentPositions(version);
+      for (const r of positions) {
+        for (const c of positions) {
+          if (isFunction[r] && isFunction[r][c]) continue;
+          // Check not overlapping finder
+          if ((r <= 8 && c <= 8) || (r <= 8 && c >= size-8) || (r >= size-8 && c <= 8)) continue;
+          placeAlignment(modules, isFunction, r, c);
+        }
+      }
+    }
+
+    // Dark module
+    setModule(modules, isFunction, size - 8, 8, true);
+
+    // Reserve format & version info areas
+    for (let i = 0; i < 8; i++) {
+      setFunctionModule(isFunction, 8, i); setFunctionModule(isFunction, i, 8);
+      setFunctionModule(isFunction, 8, size - 1 - i); setFunctionModule(isFunction, size - 1 - i, 8);
+    }
+    setFunctionModule(isFunction, 8, 8);
+
+    // Place data
+    let bitIdx = 0;
+    const allBits = allCodewords.map(b => b.toString(2).padStart(8, '0')).join('');
+    let right = size - 1;
+    while (right >= 0) {
+      if (right === 6) right--;
+      for (let vert = 0; vert < size; vert++) {
+        for (let j = 0; j < 2; j++) {
+          const x = right - j;
+          const upward = ((right + 1) & 2) === 0;
+          const y = upward ? size - 1 - vert : vert;
+          if (y >= 0 && y < size && x >= 0 && x < size && !isFunction[y][x]) {
+            modules[y][x] = bitIdx < allBits.length ? allBits[bitIdx] === '1' : false;
+            bitIdx++;
+          }
+        }
+      }
+      right -= 2;
+    }
+
+    // Apply mask (mask 0: (r+c)%2==0)
+    for (let r = 0; r < size; r++) {
+      for (let c = 0; c < size; c++) {
+        if (!isFunction[r][c]) {
+          if ((r + c) % 2 === 0) modules[r][c] = !modules[r][c];
+        }
+      }
+    }
+
+    // Place format info (ECC-L=01, mask=000 → format bits)
+    const formatBits = getFormatBits(0); // ECC-L, mask 0
+    for (let i = 0; i < 15; i++) {
+      const bit = ((formatBits >> (14 - i)) & 1) === 1;
+      // Around top-left finder
+      if (i < 6) modules[8][i] = bit;
+      else if (i < 8) modules[8][i + 1] = bit;
+      else if (i < 9) modules[14 - i + 1][8] = bit;
+      else modules[14 - i][8] = bit;
+      // Around other finders
+      if (i < 8) modules[size - 1 - i][8] = bit;
+      else modules[8][size - 15 + i] = bit;
+    }
+
+    // Fill any remaining null with false
+    for (let r = 0; r < size; r++)
+      for (let c = 0; c < size; c++)
+        if (modules[r][c] === null) modules[r][c] = false;
+
+    return modules;
+  }
+
+  function setModule(modules, isFunc, r, c, val) {
+    modules[r][c] = val;
+    isFunc[r][c] = true;
+  }
+  function setFunctionModule(isFunc, r, c) {
+    if (r >= 0 && r < isFunc.length && c >= 0 && c < isFunc.length) isFunc[r][c] = true;
+  }
+
+  function placeFinder(modules, isFunc, row, col, size) {
+    for (let dr = -1; dr <= 7; dr++) {
+      for (let dc = -1; dc <= 7; dc++) {
+        const r = row + dr, c = col + dc;
+        if (r < 0 || r >= size || c < 0 || c >= size) continue;
+        const inOuter = dr === 0 || dr === 6 || dc === 0 || dc === 6;
+        const inInner = dr >= 2 && dr <= 4 && dc >= 2 && dc <= 4;
+        const isBorder = dr === -1 || dr === 7 || dc === -1 || dc === 7;
+        setModule(modules, isFunc, r, c, !isBorder && (inOuter || inInner));
+      }
+    }
+  }
+
+  function placeAlignment(modules, isFunc, centerR, centerC) {
+    for (let dr = -2; dr <= 2; dr++) {
+      for (let dc = -2; dc <= 2; dc++) {
+        const r = centerR + dr, c = centerC + dc;
+        setModule(modules, isFunc, r, c,
+          Math.abs(dr) === 2 || Math.abs(dc) === 2 || (dr === 0 && dc === 0));
+      }
+    }
+  }
+
+  function getAlignmentPositions(ver) {
+    if (ver === 1) return [];
+    const last = ver * 4 + 10;
+    if (ver <= 6) return [6, last];
+    const count = Math.floor(ver / 7) + 2;
+    const step = Math.ceil((last - 6) / (count - 1));
+    const positions = [6];
+    for (let i = 1; i < count; i++) positions.push(last - (count - 1 - i) * step);
+    return positions;
+  }
+
+  // GF(256) Reed-Solomon
+  const GF_EXP = new Array(512);
+  const GF_LOG = new Array(256);
+  (function() {
+    let x = 1;
+    for (let i = 0; i < 255; i++) {
+      GF_EXP[i] = x;
+      GF_LOG[x] = i;
+      x = (x << 1) ^ (x >= 128 ? 0x11d : 0);
+    }
+    for (let i = 255; i < 512; i++) GF_EXP[i] = GF_EXP[i - 255];
+  })();
+
+  function gfMul(a, b) {
+    if (a === 0 || b === 0) return 0;
+    return GF_EXP[GF_LOG[a] + GF_LOG[b]];
+  }
+
+  function rsEncode(data, ecLen) {
+    // Generator polynomial
+    let gen = [1];
+    for (let i = 0; i < ecLen; i++) {
+      const next = new Array(gen.length + 1).fill(0);
+      for (let j = 0; j < gen.length; j++) {
+        next[j] ^= gen[j];
+        next[j + 1] ^= gfMul(gen[j], GF_EXP[i]);
+      }
+      gen = next;
+    }
+    const remainder = new Array(ecLen).fill(0);
+    for (const b of data) {
+      const factor = b ^ remainder[0];
+      remainder.shift();
+      remainder.push(0);
+      for (let i = 0; i < ecLen; i++) {
+        remainder[i] ^= gfMul(gen[i + 1], factor);
+      }
+    }
+    return remainder;
+  }
+
+  function getFormatBits(mask) {
+    // ECC level L = 01, mask pattern
+    let data = (1 << 3) | mask; // 01_000 for L + mask
+    let rem = data;
+    for (let i = 0; i < 10; i++) rem = (rem << 1) ^ ((rem >> 9) * 0x537);
+    const bits = ((data << 10) | rem) ^ 0x5412;
+    return bits;
+  }
+
+  // Generate on load
+  const canvas = document.getElementById('qr-canvas');
+  if (canvas) drawQR(canvas, QR_URL);
+})();
+</script>
+
+</body>
+</html>
