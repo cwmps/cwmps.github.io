@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>踩地雷 Minesweeper</title>
+<style>
+  /* ===== 經典 Windows 灰色風格 ===== */
+  body {
+    background: #008080;               /* 舊版 Windows 桌面綠 */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    font-family: "Microsoft JhengHei", sans-serif;
+    padding: 20px 10px;
+    user-select: none;
+  }
+  h1 { color: #fff; font-size: 22px; margin: 0 0 12px; text-shadow: 1px 1px 2px #000; }
+
+  /* 3D 凸起/凹陷邊框（經典立體感） */
+  .raised { border: 3px solid; border-color: #fff #808080 #808080 #fff; }
+  .sunken { border: 3px solid; border-color: #808080 #fff #fff #808080; }
+
+  #window { background: #c0c0c0; padding: 8px; }
+
+  /* 難度選單 */
+  #menu { margin-bottom: 8px; display: flex; gap: 6px; flex-wrap: wrap; }
+  #menu button {
+    background: #c0c0c0;
+    border: 2px solid; border-color: #fff #808080 #808080 #fff;
+    padding: 3px 12px; font-size: 14px; cursor: pointer;
+    font-family: inherit;
+  }
+  #menu button:active, #menu button.on {
+    border-color: #808080 #fff #fff #808080;
+    background: #b0b0b0;
+  }
+
+  /* 上方面板：地雷數 / 笑臉 / 計時 */
+  #top {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 5px 6px; margin-bottom: 8px;
+  }
+  .led {
+    background: #000; color: #f00;
+    font-family: "Consolas", "Courier New", monospace;
+    font-size: 26px; font-weight: bold;
+    padding: 1px 4px; letter-spacing: 2px;
+    border: 2px solid; border-color: #808080 #fff #fff #808080;
+    min-width: 58px; text-align: center;
+  }
+  #face {
+    width: 40px; height: 40px; font-size: 24px; line-height: 34px;
+    background: #c0c0c0; cursor: pointer; text-align: center;
+    border: 3px solid; border-color: #fff #808080 #808080 #fff;
+  }
+  #face:active { border-color: #808080 #fff #fff #808080; }
+
+  /* 棋盤 */
+  #board { display: grid; touch-action: manipulation; }
+  .cell {
+    width: 26px; height: 26px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; font-weight: bold; cursor: pointer;
+    background: #c0c0c0;
+    border: 3px solid; border-color: #fff #808080 #808080 #fff;  /* 未翻開＝凸起 */
+    box-sizing: border-box;
+  }
+  .cell.open {
+    border: 1px solid #808080;   /* 翻開＝平面 */
+    background: #c0c0c0;
+  }
+  .cell.boom { background: #f00; }        /* 踩到的那顆雷 */
+  .cell.wrong { background: #ffd0d0; }     /* 插錯旗 */
+
+  /* 經典數字顏色 */
+  .n1 { color: #0000ff; } .n2 { color: #008000; }
+  .n3 { color: #ff0000; } .n4 { color: #000080; }
+  .n5 { color: #800000; } .n6 { color: #008080; }
+  .n7 { color: #000000; } .n8 { color: #808080; }
+
+  #hint { color: #e0f0f0; font-size: 13px; margin-top: 12px; text-align: center; line-height: 1.7; }
+</style>
+</head>
+<body>
+
+<h1>💣 踩地雷</h1>
+
+<div id="window" class="raised">
+  <div id="menu">
+    <button id="btn-初級" class="lvl on">初級 9×9</button>
+    <button id="btn-中級" class="lvl">中級 16×16</button>
+    <button id="btn-高級" class="lvl">高級 16×30</button>
+    <button id="btn-sound" class="on">🔊 音效</button>
+    <button id="btn-music">🎵 音樂</button>
+  </div>
+  <div id="top" class="sunken">
+    <div id="mineLed" class="led">010</div>
+    <div id="face">🙂</div>
+    <div id="timeLed" class="led">000</div>
+  </div>
+  <div id="board" class="sunken"></div>
+</div>
+
+<div id="hint">
+  左鍵：翻開格子｜右鍵：插旗 🚩｜點數字：若旁邊旗數符合，自動翻開周圍<br>
+  手機用法：點一下翻開，長按插旗｜🔊🎵 可開關音效與背景音樂
+</div>
+
+<script>
+// ================== 設定區（想改難度就改這裡） ==================
+const 難度表 = {
+  初級: { 列: 9,  行: 9,  雷: 10 },
+  中級: { 列: 16, 行: 16, 雷: 40 },
+  高級: { 列: 16, 行: 30, 雷: 99 },
+};
+
+// ================== 遊戲狀態 ==================
+let 列數, 行數, 雷數;
+let 盤;              // 盤[r][c] = { 雷, 數字, 狀態 }  狀態: 0未開 1已開 2插旗
+let 已開格數, 旗數;
+let 開始了, 結束了;
+let 秒數 = 0, 計時器 = null;
+
+const 棋盤 = document.getElementById('board');
+const 笑臉 = document.getElementById('face');
+const 雷顯示 = document.getElementById('mineLed');
+const 時顯示 = document.getElementById('timeLed');
+
+// ================== 新遊戲 ==================
+function 新遊戲(難度名) {
+  const d = 難度表[難度名];
+  列數 = d.列; 行數 = d.行; 雷數 = d.雷;
+  盤 = [];
+  for (let r = 0; r < 列數; r++) {
+    盤.push([]);
+    for (let c = 0; c < 行數; c++) 盤[r].push({ 雷: false, 數字: 0, 狀態: 0 });
+  }
+  已開格數 = 0; 旗數 = 0;
+  開始了 = false; 結束了 = false;
+  秒數 = 0;
+  clearInterval(計時器); 計時器 = null;
+  時顯示.textContent = '000';
+  笑臉.textContent = '🙂';
+  更新雷數();
+  畫棋盤();
+  // 切換難度按鈕外觀（只處理難度按鈕，不影響音效/音樂開關）
+  document.querySelectorAll('#menu .lvl').forEach(b => b.classList.remove('on'));
+  document.getElementById('btn-' + 難度名).classList.add('on');
+}
+
+// 第一下點擊後才佈雷（保證第一下不會踩雷）
+function 佈雷(安全r, 安全c) {
+  let 已放 = 0;
+  while (已放 < 雷數) {
+    const r = Math.floor(Math.random() * 列數);
+    const c = Math.floor(Math.random() * 行數);
+    // 避開第一下點的格子及其周圍
+    if (Math.abs(r - 安全r) <= 1 && Math.abs(c - 安全c) <= 1) continue;
+    if (盤[r][c].雷) continue;
+    盤[r][c].雷 = true;
+    已放++;
+  }
+  // 計算每格周圍雷數
+  for (let r = 0; r < 列數; r++)
+    for (let c = 0; c < 行數; c++)
+      盤[r][c].數字 = 周圍(r, c).filter(([a, b]) => 盤[a][b].雷).length;
+}
+
+// 取得周圍 8 格（自動排除超出邊界）
+function 周圍(r, c) {
+  const 結果 = [];
+  for (let dr = -1; dr <= 1; dr++)
+    for (let dc = -1; dc <= 1; dc++) {
+      if (dr === 0 && dc === 0) continue;
+      const a = r + dr, b = c + dc;
+      if (a >= 0 && a < 列數 && b >= 0 && b < 行數) 結果.push([a, b]);
+    }
+  return 結果;
+}
+
+// ================== 畫面 ==================
+function 畫棋盤() {
+  棋盤.style.gridTemplateColumns = `repeat(${行數}, 26px)`;
+  棋盤.innerHTML = '';
+  for (let r = 0; r < 列數; r++)
+    for (let c = 0; c < 行數; c++) {
+      const div = document.createElement('div');
+      div.className = 'cell';
+      div.dataset.r = r;
+      div.dataset.c = c;
+      棋盤.appendChild(div);
+    }
+}
+
+function 格子元素(r, c) {
+  return 棋盤.children[r * 行數 + c];
+}
+
+function 畫格子(r, c) {
+  const g = 盤[r][c];
+  const el = 格子元素(r, c);
+  if (g.狀態 === 1) {
+    el.classList.add('open');
+    if (g.雷) el.textContent = '💣';
+    else if (g.數字 > 0) { el.textContent = g.數字; el.className = 'cell open n' + g.數字; }
+    else el.textContent = '';
+  } else if (g.狀態 === 2) {
+    el.textContent = '🚩';
+  } else {
+    el.textContent = '';
+  }
+}
+
+function 更新雷數() {
+  const n = 雷數 - 旗數;
+  雷顯示.textContent = (n < 0 ? '-' : '') + String(Math.abs(n)).padStart(n < 0 ? 2 : 3, '0');
+}
+
+// ================== 遊戲邏輯 ==================
+function 翻開(r, c) {
+  if (結束了) return;
+  const g = 盤[r][c];
+  if (g.狀態 === 2) return;              // 插旗的不能翻
+  if (g.狀態 === 1) { 連鎖翻開(r, c); return; }  // 點已開的數字 → 快速翻開
+  if (!開始了) { 佈雷(r, c); 開始了 = true; 啟動計時(); }
+  if (g.雷) { 輸了(r, c); return; }
+
+  // 用堆疊做洪水填充（翻開空白區塊）
+  const 堆疊 = [[r, c]];
+  while (堆疊.length) {
+    const [a, b] = 堆疊.pop();
+    const x = 盤[a][b];
+    if (x.狀態 !== 0) continue;
+    x.狀態 = 1; 已開格數++;
+    畫格子(a, b);
+    if (x.數字 === 0) 周圍(a, b).forEach(p => 堆疊.push(p));
+  }
+  檢查獲勝();
+}
+
+// 點已翻開的數字：若周圍旗數＝數字，自動翻開周圍未插旗格
+function 連鎖翻開(r, c) {
+  const g = 盤[r][c];
+  if (g.數字 === 0) return;
+  const 鄰 = 周圍(r, c);
+  const 旗 = 鄰.filter(([a, b]) => 盤[a][b].狀態 === 2).length;
+  if (旗 !== g.數字) return;
+  for (const [a, b] of 鄰) {
+    if (盤[a][b].狀態 === 0) {
+      if (盤[a][b].雷) { 輸了(a, b); return; }
+      翻開(a, b);
+      if (結束了) return;
+    }
+  }
+}
+
+function 插旗(r, c) {
+  if (結束了) return;
+  const g = 盤[r][c];
+  if (g.狀態 === 1) return;
+  if (g.狀態 === 0) { g.狀態 = 2; 旗數++; 嗶(880, 0.08, 'triangle'); }   // 插旗
+  else { g.狀態 = 0; 旗數--; 嗶(440, 0.08, 'triangle'); }                // 拔旗
+  畫格子(r, c);
+  更新雷數();
+}
+
+function 輸了(踩r, 踩c) {
+  結束了 = true;
+  clearInterval(計時器);
+  笑臉.textContent = '😵';
+  爆炸聲();
+  // 顯示所有雷、標出插錯的旗
+  for (let r = 0; r < 列數; r++)
+    for (let c = 0; c < 行數; c++) {
+      const g = 盤[r][c];
+      const el = 格子元素(r, c);
+      if (g.雷 && g.狀態 !== 2) { g.狀態 = 1; 畫格子(r, c); el.classList.add('open'); }
+      if (!g.雷 && g.狀態 === 2) { el.textContent = '❌'; el.classList.add('wrong'); }
+    }
+  格子元素(踩r, 踩c).classList.add('boom');
+}
+
+function 檢查獲勝() {
+  if (已開格數 === 列數 * 行數 - 雷數) {
+    結束了 = true;
+    clearInterval(計時器);
+    笑臉.textContent = '😎';
+    勝利聲();
+    // 剩下的雷自動插旗
+    for (let r = 0; r < 列數; r++)
+      for (let c = 0; c < 行數; c++)
+        if (盤[r][c].雷 && 盤[r][c].狀態 !== 2) { 盤[r][c].狀態 = 2; 旗數++; 畫格子(r, c); }
+    更新雷數();
+  }
+}
+
+function 啟動計時() {
+  計時器 = setInterval(() => {
+    秒數 = Math.min(秒數 + 1, 999);
+    時顯示.textContent = String(秒數).padStart(3, '0');
+  }, 1000);
+}
+
+// ================== 音效與背景音樂（Web Audio，不需外部檔案） ==================
+let 音效開 = true, 音樂開 = false;
+let 音訊環境 = null;
+
+function 音訊() {
+  if (!音訊環境) 音訊環境 = new (window.AudioContext || window.webkitAudioContext)();
+  if (音訊環境.state === 'suspended') 音訊環境.resume();
+  return 音訊環境;
+}
+
+// 基本嗶聲：頻率(Hz)、長度(秒)、波形、音量
+function 嗶(頻率, 秒, 波形 = 'square', 音量 = 0.12) {
+  if (!音效開) return;
+  const a = 音訊(), o = a.createOscillator(), g = a.createGain();
+  o.type = 波形; o.frequency.value = 頻率;
+  g.gain.setValueAtTime(音量, a.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001, a.currentTime + 秒);
+  o.connect(g); g.connect(a.destination);
+  o.start(); o.stop(a.currentTime + 秒);
+}
+
+function 爆炸聲() {
+  if (!音效開) return;
+  const a = 音訊();
+  // 白噪音模擬爆炸
+  const 長 = a.sampleRate * 0.5;
+  const buf = a.createBuffer(1, 長, a.sampleRate);
+  const d = buf.getChannelData(0);
+  for (let i = 0; i < 長; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / 長);
+  const src = a.createBufferSource(); src.buffer = buf;
+  const g = a.createGain(); g.gain.value = 0.3;
+  src.connect(g); g.connect(a.destination); src.start();
+  嗶(80, 0.5, 'sawtooth', 0.2);   // 低音轟隆
+}
+
+function 勝利聲() {
+  if (!音效開) return;
+  // 上行琶音 Do Mi Sol Do
+  [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => 嗶(f, 0.18, 'triangle', 0.15), i * 130));
+}
+
+// 背景音樂：簡單八音盒循環（頻率 0 = 休止符）
+const 旋律 = [659, 784, 880, 784, 659, 587, 523, 587,
+              659, 784, 880, 1047, 880, 784, 659, 0];
+let 音樂位置 = 0, 音樂計時 = null;
+
+function 播一個音() {
+  const f = 旋律[音樂位置 % 旋律.length];
+  音樂位置++;
+  if (f === 0) return;   // 休止符
+  const a = 音訊(), o = a.createOscillator(), g = a.createGain();
+  o.type = 'triangle'; o.frequency.value = f;
+  g.gain.setValueAtTime(0.06, a.currentTime);   // 音樂音量放小，不干擾
+  g.gain.exponentialRampToValueAtTime(0.001, a.currentTime + 0.25);
+  o.connect(g); g.connect(a.destination);
+  o.start(); o.stop(a.currentTime + 0.25);
+}
+
+document.getElementById('btn-music').addEventListener('click', () => {
+  音樂開 = !音樂開;
+  document.getElementById('btn-music').classList.toggle('on', 音樂開);
+  if (音樂開) { 音訊(); 音樂計時 = setInterval(播一個音, 280); }
+  else clearInterval(音樂計時);
+});
+
+document.getElementById('btn-sound').addEventListener('click', () => {
+  音效開 = !音效開;
+  const b = document.getElementById('btn-sound');
+  b.classList.toggle('on', 音效開);
+  b.textContent = 音效開 ? '🔊 音效' : '🔇 音效';
+});
+
+// ================== 事件綁定 ==================
+// 左鍵翻開
+棋盤.addEventListener('click', e => {
+  const el = e.target.closest('.cell');
+  if (!el || 長按觸發) return;
+  const r = +el.dataset.r, c = +el.dataset.c;
+  if (!結束了 && 盤[r][c].狀態 !== 2) 嗶(600, 0.05);   // 翻開音效
+  翻開(r, c);
+});
+// 右鍵插旗（擋掉瀏覽器選單）
+棋盤.addEventListener('contextmenu', e => {
+  e.preventDefault();
+  const el = e.target.closest('.cell');
+  if (el) 插旗(+el.dataset.r, +el.dataset.c);
+});
+// 按下時笑臉變 😮
+棋盤.addEventListener('mousedown', () => { if (!結束了) 笑臉.textContent = '😮'; });
+document.addEventListener('mouseup', () => { if (!結束了) 笑臉.textContent = '🙂'; });
+
+// 手機長按插旗
+let 長按計時 = null, 長按觸發 = false;
+棋盤.addEventListener('touchstart', e => {
+  const el = e.target.closest('.cell');
+  if (!el) return;
+  長按觸發 = false;
+  長按計時 = setTimeout(() => {
+    長按觸發 = true;
+    插旗(+el.dataset.r, +el.dataset.c);
+  }, 400);
+}, { passive: true });
+棋盤.addEventListener('touchend', () => clearTimeout(長按計時));
+棋盤.addEventListener('touchmove', () => clearTimeout(長按計時));
+
+// 笑臉＝重新開始（用目前難度）
+笑臉.addEventListener('click', () => 新遊戲(目前難度));
+
+// 難度按鈕
+let 目前難度 = '初級';
+for (const 名 of Object.keys(難度表)) {
+  document.getElementById('btn-' + 名).addEventListener('click', () => {
+    目前難度 = 名;
+    新遊戲(名);
+  });
+}
+
+// 開始！
+新遊戲('初級');
+</script>
+
+<!-- ══ QR Code 懸浮元件 ══ -->
+<style>
+  #qr-fab {
+    position: fixed; bottom: 1.5rem; right: 1.5rem;
+    z-index: 9999; display: flex; flex-direction: column;
+    align-items: flex-end; gap: 0.6rem;
+    font-family: 'Noto Sans TC', sans-serif;
+  }
+  #qr-panel {
+    background: #1a2035; border: 1px solid #2a3350;
+    border-radius: 16px; padding: 1.4rem 1.4rem 1rem;
+    text-align: center; box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+    display: none; flex-direction: column; align-items: center;
+    gap: 0.7rem; min-width: 190px; animation: qrFadeIn 0.2s ease;
+  }
+  #qr-panel.open { display: flex; }
+  @keyframes qrFadeIn {
+    from { opacity:0; transform: translateY(10px) scale(0.96); }
+    to   { opacity:1; transform: translateY(0) scale(1); }
+  }
+  #qr-panel-title { font-size: 0.82rem; font-weight: 600; color: #e8eaf2; line-height: 1.4; max-width: 170px; }
+  #qr-panel img { width: 160px; height: 160px; background: #fff; border-radius: 10px; padding: 6px; display: block; }
+  #qr-panel-url { font-size: 0.58rem; color: #7a8099; word-break: break-all; max-width: 170px; line-height: 1.4; font-family: monospace; }
+  #qr-panel-close { font-size: 0.72rem; color: #7a8099; background: none; border: 1px solid #2a3350; border-radius: 100px; padding: 0.2rem 0.8rem; cursor: pointer; transition: color 0.15s; }
+  #qr-panel-close:hover { color: #e8eaf2; }
+  #qr-toggle-btn { width: 48px; height: 48px; border-radius: 50%; background: linear-gradient(135deg, #00c9a7, #7c6ded); border: none; font-size: 1.4rem; cursor: pointer; box-shadow: 0 4px 20px rgba(0,201,167,0.4); transition: transform 0.2s, box-shadow 0.2s; display: flex; align-items: center; justify-content: center; }
+  #qr-toggle-btn:hover { transform: scale(1.1); box-shadow: 0 6px 28px rgba(0,201,167,0.6); }
+</style>
+<div id="qr-fab">
+  <div id="qr-panel">
+    <div id="qr-panel-title">踩地雷 Minesweeper</div>
+    <img src="https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=https%3A%2F%2Fcwmps.github.io%2Fgames%2Fminesweeper.html" alt="QR Code" loading="lazy"/>
+    <div id="qr-panel-url">https://cwmps.github.io/games/minesweeper.html</div>
+    <button id="qr-panel-close" onclick="toggleQR()">關閉</button>
+  </div>
+  <button id="qr-toggle-btn" onclick="toggleQR()" title="掃描 QR Code">📱</button>
+</div>
+<script>
+  function toggleQR() { document.getElementById('qr-panel').classList.toggle('open'); }
+  document.addEventListener('click', function(e) {
+    const fab = document.getElementById('qr-fab');
+    if (fab && !fab.contains(e.target)) document.getElementById('qr-panel').classList.remove('open');
+  });
+</script>
+</body>
+</html>
