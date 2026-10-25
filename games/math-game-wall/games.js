@@ -488,18 +488,31 @@ const GAMES = {
         reset(); say('準備…', 800);
       };
       const hurt = (text, skip = true) => { lives--; api.sfx('wrong'); api.hud({ lives }); if (skip) qi++; say(text, 1500); api.later(newQ, 1500); pause = 99999; };
-      const step = () => {
-        if (pause > 0) { pause -= 120; if (pause <= 0) $('#mm').hidden = true; return; }
-        tick++;
-        // 按住才走，放開就停
-        if (held) { dir = held; const [dx, dy] = D[held]; if (!wall(player.x + dx, player.y + dy)) { player.x += dx; player.y += dy; } }
+      // 按一下走一格；按住不放會一直走，放開就停
+      let lastMove = 0;
+      const checkPlayer = () => {
         const z = MAP[player.y][player.x];
         if ('ABCD'.includes(z)) {
           const k = 'ABCD'.indexOf(z), it = items[qi];
           if (os[k] === it.a) { score++; api.sfx('correct'); api.hud({ score }); qi++; say('答對了！', 900); api.later(newQ, 900); pause = 99999; }
           else hurt(`答錯了！正確答案是 <b>${esc(it.a)}</b>`);
-          return;
+          return true;
         }
+        if (ghosts.some(gh => gh.x === player.x && gh.y === player.y)) { hurt('被怪物抓到了！', false); return true; }
+        return false;
+      };
+      const tryMove = d => {
+        if (pause > 0) return;
+        dir = d; lastMove = performance.now();
+        const [dx, dy] = D[d];
+        if (!wall(player.x + dx, player.y + dy)) { player.x += dx; player.y += dy; }
+        checkPlayer();
+      };
+      const step = () => {
+        if (pause > 0) { pause -= 120; if (pause <= 0) $('#mm').hidden = true; return; }
+        tick++;
+        if (held && performance.now() - lastMove >= 170) tryMove(held);
+        if (pause > 0) return;
         if (tick % 2 === 0 || qi > 5) ghosts.forEach(gh => {
           const back = { u: 'd', d: 'u', l: 'r', r: 'l' }[gh.d];
           let opts = Object.keys(D).filter(k => { const [dx, dy] = D[k]; const c = MAP[gh.y + dy]?.[gh.x + dx]; return c === '.'; });
@@ -508,7 +521,7 @@ const GAMES = {
           gh.d = chase ? opts.sort((a, b) => dist(gh, a) - dist(gh, b))[0] : opts[Math.random() * opts.length | 0];
           if (gh.d) { gh.x += D[gh.d][0]; gh.y += D[gh.d][1]; }
         });
-        if (ghosts.some(gh => gh.x === player.x && gh.y === player.y)) hurt('被怪物抓到了！', false);
+        checkPlayer();
       };
       const dist = (gh, k) => Math.abs(gh.x + D[k][0] - player.x) + Math.abs(gh.y + D[k][1] - player.y);
       const draw = () => {
@@ -538,12 +551,12 @@ const GAMES = {
       };
       const keymap = { ArrowUp: 'u', ArrowDown: 'd', ArrowLeft: 'l', ArrowRight: 'r', w: 'u', s: 'd', a: 'l', d: 'r' };
       const keyDir = e => keymap[e.key] || keymap[e.key.toLowerCase?.()];
-      api.on(document, 'keydown', e => { const k = keyDir(e); if (k) { e.preventDefault(); held = k; } });
+      api.on(document, 'keydown', e => { const k = keyDir(e); if (!k) return; e.preventDefault(); held = k; if (!e.repeat) tryMove(k); });
       api.on(document, 'keyup', e => { if (keyDir(e) === held) held = null; });
       const release = () => { held = null; };
       api.on(document, 'pointerup', release); api.on(document, 'pointercancel', release); api.on(window, 'blur', release);
       $$('.dpad button', st).forEach(b => {
-        b.onpointerdown = e => { e.preventDefault(); held = b.dataset.d; api.sfx('tick'); };
+        b.onpointerdown = e => { e.preventDefault(); held = b.dataset.d; api.sfx('tick'); tryMove(held); };
         b.onpointerleave = () => { if (held === b.dataset.d) held = null; };
         b.oncontextmenu = e => e.preventDefault();
       });
