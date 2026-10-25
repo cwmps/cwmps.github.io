@@ -449,7 +449,7 @@ const GAMES = {
 
   /* 14. 迷宮追逐 */
   maze: {
-    name: '迷宮追逐', glyph: '迷', hue: 220, desc: '躲開怪物，跑進正確答案的房間。方向鍵或螢幕按鈕移動。',
+    name: '迷宮追逐', glyph: '迷', hue: 220, desc: '躲開怪物，跑進正確答案的房間。按住方向鍵或螢幕按鈕才會走，放開就停。',
     run(st, api) {
       const MAP = [
         '###############',
@@ -464,15 +464,20 @@ const GAMES = {
         '#C....#.#....D#',
         '###############'];
       const W = MAP[0].length, H = MAP.length, items = api.items;
-      let qi = 0, score = 0, lives = 3, os = [], player, ghosts, dir = null, want = null, pause = 0, tick = 0, msg = '';
+      let qi = 0, score = 0, lives = 3, os = [], player, ghosts, dir = null, held = null, pause = 0, tick = 0, msg = '';
       st.innerHTML = `<div class="maze"><div class="maze-q"><div class="qtext" id="mq"></div><div class="maze-opts" id="mo"></div></div>
         <div class="maze-board"><canvas id="mc"></canvas><div class="maze-msg" id="mm" hidden></div></div>
         <div class="dpad"><button data-d="u" aria-label="上">▲</button><button data-d="l" aria-label="左">◀</button><button data-d="d" aria-label="下">▼</button><button data-d="r" aria-label="右">▶</button></div></div>`;
-      const cell = Math.floor(Math.min(560, st.clientWidth - 8) / W);
-      const g = setupCanvas($('#mc'), cell * W, cell * H);
+      // 每一格的大小跟著畫面寬度走（視窗縮放、全螢幕時會重新計算）
+      let cell = 0, g;
+      const fit = () => {
+        const c = Math.max(16, Math.floor(Math.min(560, st.clientWidth - 8) / W));
+        if (c !== cell) { cell = c; g = setupCanvas($('#mc'), cell * W, cell * H); }
+      };
+      fit();
       const D = { u: [0, -1], d: [0, 1], l: [-1, 0], r: [1, 0] };
       const wall = (x, y) => MAP[y]?.[x] === '#' || MAP[y]?.[x] == null;
-      const reset = () => { player = { x: 7, y: 5 }; ghosts = [{ x: 1, y: 5, d: 'u' }, { x: 13, y: 5, d: 'd' }]; dir = want = null; };
+      const reset = () => { player = { x: 7, y: 5 }; ghosts = [{ x: 1, y: 5, d: 'u' }, { x: 13, y: 5, d: 'd' }]; dir = null; };
       const say = (t, ms = 1100) => { const m = $('#mm'); m.hidden = false; m.innerHTML = t; pause = ms; };
       const newQ = () => {
         if (qi >= items.length || lives <= 0) return api.finish(score, items.length);
@@ -486,8 +491,8 @@ const GAMES = {
       const step = () => {
         if (pause > 0) { pause -= 120; if (pause <= 0) $('#mm').hidden = true; return; }
         tick++;
-        if (want) { const [dx, dy] = D[want]; if (!wall(player.x + dx, player.y + dy)) dir = want; }
-        if (dir) { const [dx, dy] = D[dir]; if (!wall(player.x + dx, player.y + dy)) { player.x += dx; player.y += dy; } }
+        // 按住才走，放開就停
+        if (held) { dir = held; const [dx, dy] = D[held]; if (!wall(player.x + dx, player.y + dy)) { player.x += dx; player.y += dy; } }
         const z = MAP[player.y][player.x];
         if ('ABCD'.includes(z)) {
           const k = 'ABCD'.indexOf(z), it = items[qi];
@@ -507,6 +512,7 @@ const GAMES = {
       };
       const dist = (gh, k) => Math.abs(gh.x + D[k][0] - player.x) + Math.abs(gh.y + D[k][1] - player.y);
       const draw = () => {
+        fit();
         const ink = css('--ink'), card = css('--card'), wallC = css('--blue');
         g.fillStyle = card; g.fillRect(0, 0, cell * W, cell * H);
         for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
@@ -531,8 +537,16 @@ const GAMES = {
         }
       };
       const keymap = { ArrowUp: 'u', ArrowDown: 'd', ArrowLeft: 'l', ArrowRight: 'r', w: 'u', s: 'd', a: 'l', d: 'r' };
-      api.on(document, 'keydown', e => { const k = keymap[e.key] || keymap[e.key.toLowerCase?.()]; if (k) { e.preventDefault(); want = k; } });
-      $$('.dpad button', st).forEach(b => b.onpointerdown = e => { e.preventDefault(); want = b.dataset.d; api.sfx('tick'); });
+      const keyDir = e => keymap[e.key] || keymap[e.key.toLowerCase?.()];
+      api.on(document, 'keydown', e => { const k = keyDir(e); if (k) { e.preventDefault(); held = k; } });
+      api.on(document, 'keyup', e => { if (keyDir(e) === held) held = null; });
+      const release = () => { held = null; };
+      api.on(document, 'pointerup', release); api.on(document, 'pointercancel', release); api.on(window, 'blur', release);
+      $$('.dpad button', st).forEach(b => {
+        b.onpointerdown = e => { e.preventDefault(); held = b.dataset.d; api.sfx('tick'); };
+        b.onpointerleave = () => { if (held === b.dataset.d) held = null; };
+        b.oncontextmenu = e => e.preventDefault();
+      });
       api.every(step, 120); api.frame(() => draw());
       newQ();
     },

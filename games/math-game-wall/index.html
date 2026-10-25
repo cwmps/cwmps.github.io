@@ -313,8 +313,9 @@ main { padding-block: 28px 64px }
 .maze-board { position: relative; max-width: 100%; border-radius: 10px; overflow: hidden }
 .maze-board canvas, .air-board canvas { display: block; max-width: 100% }
 .maze-msg { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; font: 26px var(--f-display); background: color-mix(in srgb, var(--card) 70%, transparent); padding: 10px }
-.dpad { display: grid; grid-template-columns: repeat(3, 56px); grid-template-rows: repeat(2, 48px); gap: 6px }
-.dpad button { border: 2px solid var(--line); background: var(--paper); border-radius: 12px; font-size: 20px; touch-action: manipulation }
+.dpad { display: grid; grid-template-columns: repeat(3, 64px); grid-template-rows: repeat(2, 56px); gap: 6px }
+.dpad button { border: 2px solid var(--line); background: var(--paper); border-radius: 12px; font-size: 20px; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none }
+.dpad button:active { background: var(--hl); border-color: var(--ink) }
 .dpad [data-d="u"] { grid-column: 2 } .dpad [data-d="l"] { grid-column: 1; grid-row: 2 } .dpad [data-d="d"] { grid-column: 2; grid-row: 2 } .dpad [data-d="r"] { grid-column: 3; grid-row: 2 }
 
 /* 飛機 */
