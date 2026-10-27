@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>秤人之危</title>
+<style>
+  /* ===== 風格：藥品標籤（深藥局綠底、白色藥袋標籤卡、條碼、膠囊按鈕、警示橘） ===== */
+  :root{
+    --bg:#0f3b36; --bg2:#0b2f2b;
+    --card:#fdfdf8; --surface:#eef3ef; --inset:#ffffff;
+    --ink:#102522; --sub:#4b5d59; --line:#102522;
+    --blue:#0b7a68; --blue-soft:#d7efe9; --blue2:#13a58c;
+    --orange:#d9480f; --orange-soft:#ffe8d6;
+    --green:#2b8a3e; --green-soft:#d3f9d8;
+    --red:#c92a2a; --red-soft:#ffe3e3;
+    --tri-soft:#fff3bf;
+    --on-accent:#ffffff; --on-orange:#ffffff; --on-green:#ffffff;
+    --mono:Consolas,"Courier New",monospace;
+  }
+  *{ box-sizing:border-box }
+  html{ font-size:17px; }
+  body.big{ font-size:1.3rem; }
+  body{
+    margin:0; color:var(--ink); line-height:1.6;
+    font-family:"Microsoft JhengHei","PingFang TC","Noto Sans TC",system-ui,sans-serif;
+    background-color:var(--bg);
+    background-image:repeating-linear-gradient(135deg, rgba(255,255,255,.035) 0 14px, transparent 14px 28px);
+    min-height:100vh;
+  }
+  main{ max-width:960px; margin:0 auto; padding:0 16px 40px; }
+
+  /* 頁首：像藥袋上方的藥局名 */
+  header{ max-width:960px; margin:0 auto; padding:22px 16px 10px; display:flex; align-items:center; gap:14px; color:var(--on-accent); }
+  .rx{ flex:none; width:58px; height:58px; border-radius:50%; background:var(--card); color:var(--blue);
+    display:grid; place-items:center; font:900 1.6rem/1 Georgia,serif; border:4px double var(--blue); }
+  header h1{ margin:0; font-size:clamp(1.7rem,5vw,2.4rem); font-weight:900; letter-spacing:.12em; line-height:1.2; }
+  header p{ margin:0; opacity:.85; font-size:.95rem; }
+  header .grow{ flex:1; min-width:0; }
+  #bigBtn{ flex:none; }
+
+  /* 標籤卡 */
+  .label{ background:var(--card); border:2px solid var(--line); border-radius:8px; margin:16px 0; overflow:hidden;
+    box-shadow:0 6px 0 rgba(0,0,0,.25); }
+  .label > .head{ display:flex; align-items:center; gap:10px; background:var(--blue); color:var(--on-accent);
+    padding:8px 14px; border-bottom:2px solid var(--line); }
+  .label > .head h2{ margin:0; font-size:1.15rem; font-weight:900; letter-spacing:.06em; flex:1; }
+  .label > .head .code{ font-family:var(--mono); font-size:.8rem; opacity:.9; }
+  .barcode{ width:64px; height:24px; flex:none; background:var(--card);
+    background-image:repeating-linear-gradient(90deg,var(--ink) 0 2px,transparent 2px 4px,var(--ink) 4px 5px,transparent 5px 8px,var(--ink) 8px 11px,transparent 11px 12px);
+    border:3px solid var(--card); }
+  .warn{ background:var(--orange); color:var(--on-orange); font-weight:700; padding:4px 14px; font-size:.92rem; border-bottom:2px solid var(--line); }
+  .body{ padding:14px 16px 16px; }
+
+  .rules{ margin:0; padding-left:1.3em; }
+  .rules li{ margin:4px 0; }
+  .eg{ display:inline-block; background:var(--surface); border:1px dashed var(--sub); border-radius:4px; padding:0 6px; }
+
+  /* 吊飾區 */
+  .stage{ display:flex; flex-wrap:wrap; gap:10px; justify-content:center; }
+  .mob{ background:var(--inset); border:2px solid var(--line); border-radius:6px; padding:6px 6px 4px; text-align:center; width:132px; }
+  body.big .mob{ width:180px; }
+  .mob > svg{ width:100%; height:auto; display:block; }
+  .mob .eq .ico{ width:1.25em; height:1.25em; }
+  .mob .st{ font-size:.85rem; font-weight:700; min-height:1.5em; color:var(--sub); }
+  .mob .eq{ font-family:var(--mono); font-size:.85rem; border-top:1px dashed var(--sub); margin-top:3px; padding-top:2px; display:none; }
+  .mob.ok{ border-color:var(--green); background:var(--green-soft); }
+  .mob.ok .st{ color:var(--green); }
+  .mob.bad{ border-color:var(--red); background:var(--red-soft); }
+  .mob.bad .st{ color:var(--red); }
+  .stage.showEq .eq{ display:block; }
+
+  /* SVG 形狀顏色 */
+  .s-C{ fill:var(--blue-soft); } .s-O{ fill:var(--orange-soft); } .s-T{ fill:var(--tri-soft); } .s-W{ fill:#e9ecef; }
+  svg .ln{ stroke:var(--ink); stroke-width:2; stroke-linejoin:round; }
+  svg .wt{ font:700 11px Arial,sans-serif; fill:var(--ink); }
+  .ico{ width:1.5em; height:1.5em; vertical-align:-.35em; }
+
+  /* 作答列 */
+  .answers{ display:flex; flex-wrap:wrap; gap:10px 18px; justify-content:center; margin:14px 0 6px; }
+  .ans{ display:flex; align-items:center; gap:6px; font-weight:700; font-size:1.1rem; }
+  .ans input{ width:76px; height:48px; font:700 1.3rem var(--mono); text-align:center; border:2px solid var(--line);
+    border-radius:6px; background:var(--inset); color:var(--ink); }
+  body.big .ans input{ width:100px; height:60px; font-size:1.7rem; }
+  .ans input:focus{ outline:3px solid var(--orange); outline-offset:1px; }
+  .ans input.right{ background:var(--green-soft); border-color:var(--green); }
+  .ans input.wrong{ background:var(--red-soft); border-color:var(--red); }
+  .ans input[readonly]{ background:var(--blue-soft); }
+
+  /* 膠囊按鈕 */
+  .btns{ display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin-top:10px; }
+  button{ font:inherit; font-weight:700; cursor:pointer; min-height:48px; padding:6px 18px; border-radius:999px;
+    border:2px solid var(--line); background:var(--inset); color:var(--ink); }
+  button:hover{ background:var(--surface); }
+  button:active{ transform:translateY(2px); }
+  button.main{ color:var(--on-accent); background:linear-gradient(90deg,var(--blue) 50%,var(--blue2) 50%); }
+  button.main:hover{ filter:brightness(1.08); }
+  :focus-visible{ outline:3px solid var(--orange); outline-offset:2px; }
+
+  .msg{ margin-top:12px; min-height:1.6em; text-align:center; font-weight:700; font-size:1.05rem; }
+  .msg.ok{ color:var(--green); } .msg.bad{ color:var(--red); } .msg.tip{ color:var(--orange); }
+  .msg.win{ color:var(--on-green); background:var(--green); border:2px solid var(--line); border-radius:6px; padding:6px; }
+
+  /* 測驗 */
+  .q{ border-top:2px dashed var(--sub); padding:12px 0; }
+  .q:first-child{ border-top:none; padding-top:0; }
+  .q .qt{ font-weight:700; margin-bottom:6px; }
+  .q .stage{ justify-content:flex-start; margin-bottom:8px; }
+  .opts{ display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
+  .opts.wide{ grid-template-columns:repeat(2,1fr); }
+  @media (max-width:600px){ .opts{ grid-template-columns:repeat(2,1fr); } .opts.wide{ grid-template-columns:1fr; } }
+  .opts button{ border-radius:8px; font-family:var(--mono); }
+  .opts button.right{ background:var(--green); color:var(--on-green); }
+  .opts button.wrong{ background:var(--red); color:var(--on-accent); }
+  .opts button:disabled{ cursor:default; }
+  .fb{ margin-top:6px; font-weight:700; min-height:1.4em; }
+  .fb.ok{ color:var(--green); } .fb.bad{ color:var(--red); }
+  .score{ text-align:center; font-size:1.25rem; font-weight:900; margin-top:6px; }
+  footer{ text-align:center; color:var(--on-accent); opacity:.7; font-size:.85rem; padding:10px 16px 24px; }
+  @media (max-width:480px){ .rx{ width:46px; height:46px; font-size:1.3rem; } #bigBtn{ padding:6px 12px; } }
+</style>
+</head>
+<body>
+<header>
+  <div class="rx">Rx</div>
+  <div class="grow">
+    <h1>秤人之危</h1>
+    <p>代入消去法・算出每種藥錠多重</p>
+  </div>
+  <button id="bigBtn" type="button">📺 投影模式</button>
+</header>
+
+<main>
+  <section class="label">
+    <div class="head"><h2>用藥須知（規則）</h2><span class="barcode"></span></div>
+    <div class="warn">⚠ 劑量要剛好：每個吊飾都要平衡</div>
+    <div class="body">
+      <ul class="rules">
+        <li>吊飾平衡＝左右兩邊一樣重。</li>
+        <li><b>代入</b>：一樣重的東西可以互換，例 <span class="eg">▢＝○＋○</span> 就把 ▢ 換成 ○＋○。</li>
+        <li><b>消去</b>：兩個吊飾比一比，多出來的藥錠＝多出來的重量。</li>
+        <li>填好重量，天平會歪向比較重的那邊。</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="label" id="task1"></section>
+  <section class="label" id="task2"></section>
+  <section class="label" id="task3"></section>
+
+  <section class="label">
+    <div class="head"><h2>出廠檢驗（5 題測驗）</h2><span class="barcode"></span></div>
+    <div class="body">
+      <div id="quiz"></div>
+      <div class="score" id="score">得分 0 / 5</div>
+      <div class="btns"><button type="button" id="quizReset">🔄 重新作答</button></div>
+    </div>
+  </section>
+</main>
+<footer>秤人之危・題目由程式隨機產生並確認答案唯一</footer>
+
+<script>
+/* ---------- 1. 形狀與吊飾繪圖 ---------- */
+const SHAPE_NAME = { C:'方塊', O:'圓', T:'三角' };
+const SZ=24, GAP=6, STR=14, ARM=30;
+
+function shapeSVG(x, cx, top){
+  const l=cx-SZ/2, t=top, r=cx+SZ/2, b=top+SZ;
+  if(x==='C'){ const e=SZ*.28;
+    return `<g class="s-C"><path class="ln" d="M${l} ${t+e}H${r-e}V${b}H${l}Z"/><path class="ln" d="M${l} ${t+e}L${l+e} ${t}H${r}L${r-e} ${t+e}Z"/><path class="ln" d="M${r-e} ${t+e}L${r} ${t}V${b-e}L${r-e} ${b}Z"/></g>`; }
+  if(x==='O') return `<circle class="ln s-O" cx="${cx}" cy="${t+SZ/2}" r="${SZ/2-1}"/>`;
+  if(x==='T') return `<path class="ln s-T" d="M${cx} ${t+1}L${r-1} ${b-1}H${l+1}Z"/>`;
+  return `<path class="ln s-W" d="M${l+5} ${t+2}H${r-5}L${r} ${b}H${l}Z"/><text class="wt" x="${cx}" y="${t+SZ/2+6}" text-anchor="middle">${x}</text>`;
+}
+function icon(x){ return `<svg class="ico" viewBox="-14 -1 28 26" aria-label="${SHAPE_NAME[x]}">${shapeSVG(x,0,0)}</svg>`; }
+
+// tilt：-1 左邊重、1 右邊重、0 平衡
+function mobileSVG(m, tilt){
+  const a = tilt*9*Math.PI/180, dy = ARM*Math.sin(a);
+  const maxN = Math.max(m[0].length, m[1].length);
+  const H = 12+STR+maxN*(SZ+GAP)+8;
+  let s = `<line class="ln" x1="0" y1="0" x2="0" y2="12"/>`;
+  s += `<g transform="rotate(${tilt*9} 0 12)"><rect x="${-ARM-2}" y="10" width="${2*ARM+4}" height="4" fill="var(--ink)"/></g>`;
+  [[-1,m[0]],[1,m[1]]].forEach(([side,chain])=>{
+    const x = side*ARM, y0 = 12 + side*dy;
+    let y = y0;
+    chain.forEach((it,j)=>{
+      const seg = j? GAP : STR;
+      s += `<line class="ln" x1="${x}" y1="${y}" x2="${x}" y2="${y+seg}"/>`;
+      y += seg; s += shapeSVG(it, x, y); y += SZ;
+    });
+  });
+  return `<svg viewBox="-48 -4 96 ${H}" role="img" aria-label="天平吊飾">${s}</svg>`;
+}
+
+/* ---------- 2. 計算工具 ---------- */
+const rnd=(a,b)=>a+Math.floor(Math.random()*(b-a+1));
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+const rep=(x,n)=>Array(n).fill(x);
+const wOf=(chain,v)=>chain.reduce((s,x)=>s+(typeof x==='string'? v[x] : x),0);
+const shapesOf=ms=>['C','O','T'].filter(s=>ms.some(m=>m[0].includes(s)||m[1].includes(s)));
+const eqText=m=>m.map(c=>c.map(x=>typeof x==='string'? icon(x) : x).join('＋')).join(' ＝ ');
+
+// 高斯消去：唯一解才回傳
+function solve(ms){
+  const sh=shapesOf(ms), n=sh.length;
+  const M=ms.map(([L,R])=>{ const row=sh.map(()=>0); let k=0;
+    L.forEach(x=> typeof x==='string'? row[sh.indexOf(x)]++ : k-=x);
+    R.forEach(x=> typeof x==='string'? row[sh.indexOf(x)]-- : k+=x);
+    return [...row,k]; });
+  let r=0;
+  for(let c=0;c<n;c++){
+    let p=-1; for(let i=r;i<M.length;i++) if(Math.abs(M[i][c])>1e-9){p=i;break;}
+    if(p<0) return null;
+    [M[r],M[p]]=[M[p],M[r]]; const d=M[r][c]; M[r]=M[r].map(v=>v/d);
+    for(let i=0;i<M.length;i++) if(i!==r){ const f=M[i][c]; M[i]=M[i].map((v,j)=>v-f*M[r][j]); }
+    r++;
+  }
+  for(let i=r;i<M.length;i++) if(Math.abs(M[i][n])>1e-9) return null;
+  const out={}; sh.forEach((s,i)=>out[s]=M[i][n]); return out;
+}
+
+const S=(chain,v)=>[chain,[wOf(chain,v)]];   // 一邊是藥錠、另一邊是總重砝碼
+
+/* ---------- 3. 三個任務的出題規則 ---------- */
+const MAKERS = {
+  1: [ // 代入：一個「換算」吊飾＋一個「總重」吊飾
+    ()=>{ const O=rnd(2,9), k=pick([2,3]), v={C:k*O,O}; return {v, ms:[[['C'],rep('O',k)], S(['C','O'],v)]}; },
+    ()=>{ const O=rnd(2,9), d=rnd(1,6), v={C:O+d,O}; return {v, ms:[[['C'],['O',d]], S(['C','O'],v)]}; },
+    ()=>{ const C=rnd(2,8), v={C,O:2*C}; return {v, ms:[[['C','C'],['O']], S(['C','O'],v)]}; },
+    ()=>{ const O=rnd(3,9), d=rnd(1,5), v={C:2*O-d,O}; return {v, ms:[[['C',d],['O','O']], S(['O','O','C'],v)]}; },
+  ],
+  2: [ // 消去：兩個總重吊飾，只差一顆
+    ()=>{ const v={C:rnd(2,12),O:rnd(2,12)}, a=rnd(1,2), b=rnd(1,2);
+      const base=[...rep('C',a),...rep('O',b)], more=pick(['C','O']);
+      const two=more==='C'? ['C',...base] : [...base,'O'];
+      const ms=[S(base,v),S(two,v)]; if(Math.random()<.5) ms.reverse(); return {v, ms}; },
+  ],
+  3: [ // 挑戰：三種藥錠，或兩邊都有砝碼
+    ()=>{ const T=rnd(1,4), k1=pick([2,3]), k2=pick([2,3]), v={T,O:k2*T,C:k1*k2*T};
+      return {v, ms:[[['C'],rep('O',k1)], [['O'],rep('T',k2)], S(['C','O','T'],v)]}; },
+    ()=>{ const T=rnd(2,5), d=rnd(1,4), v={C:2*T,O:T+d,T};
+      return {v, ms:[[['C'],['T','T']], [['O'],['T',d]], S(['C','O','O','T'],v)]}; },
+    ()=>{ const v={C:rnd(2,12),O:rnd(2,12),T:rnd(2,12)};
+      return {v, ms:[S(['C','O'],v), S(['O','T'],v), S(['C','T'],v)]}; },
+    ()=>{ const v={C:rnd(3,10),O:rnd(3,10)}, d=3*v.O-2*v.C, e=2*v.O-v.C;
+      return {v, ms:[[['C','C',d],['O','O','O']], [['O','O'],['C',e]]]}; },
+  ],
+};
+const TASK_INFO = {
+  1:{ title:'任務 1　代入', code:'Rx-01', warn:'先看沒有總重的天平：誰可以換成誰？' },
+  2:{ title:'任務 2　消去', code:'Rx-02', warn:'兩個吊飾比一比，多出哪一顆？' },
+  3:{ title:'任務 3　挑戰', code:'Rx-03', warn:'三種藥錠或兩邊都有砝碼，一步一步換' },
+};
+
+// 出一題並檢查：正整數、各藥錠不同重、解唯一、砝碼 1~60、每串最多 5 個
+function makePuzzle(n){
+  for(let tries=0; tries<500; tries++){
+    const p = pick(MAKERS[n])();
+    const vals = Object.values(p.v);
+    if(vals.some(x=>!Number.isInteger(x)||x<1||x>30)) continue;
+    if(new Set(vals).size!==vals.length) continue;
+    const ws = p.ms.flatMap(m=>[...m[0],...m[1]]).filter(x=>typeof x==='number');
+    if(ws.some(w=>w<1||w>60)) continue;
+    if(p.ms.some(m=>m[0].length>5||m[1].length>5)) continue;
+    const sol = solve(p.ms); if(!sol) continue;
+    if(Object.keys(p.v).some(k=>Math.abs(sol[k]-p.v[k])>1e-9)) continue;
+    if(p.ms.some(m=>wOf(m[0],p.v)!==wOf(m[1],p.v))) continue;
+    return p;
+  }
+  throw new Error('出題失敗');
+}
+
+/* ---------- 4. 任務畫面 ---------- */
+const tasks = {};
+function buildTask(n){
+  const el = document.getElementById('task'+n), info = TASK_INFO[n];
+  el.innerHTML = `
+    <div class="head"><h2>${info.title}</h2><span class="code">${info.code}</span><span class="barcode"></span></div>
+    <div class="warn">⚠ ${info.warn}</div>
+    <div class="body">
+      <div class="stage"></div>
+      <div class="answers"></div>
+      <div class="btns">
+        <button type="button" class="main" data-act="check">✔ 檢查</button>
+        <button type="button" data-act="hint">💡 提示</button>
+        <button type="button" data-act="show">👀 看答案</button>
+        <button type="button" data-act="new">🔄 換一題</button>
+      </div>
+      <div class="msg" aria-live="polite"></div>
+    </div>`;
+  el.querySelector('.btns').addEventListener('click', e=>{
+    const b=e.target.closest('button'); if(!b) return;
+    ({check, hint, show, new:newPuzzle})[b.dataset.act](n);
+  });
+  newPuzzle(n);
+}
+
+function newPuzzle(n){
+  const p = makePuzzle(n), el = document.getElementById('task'+n);
+  tasks[n] = { p, hintLv:0, done:false };
+  const sh = shapesOf(p.ms);
+  el.querySelector('.answers').innerHTML = sh.map(s=>
+    `<label class="ans">${icon(s)} ＝ <input type="number" inputmode="numeric" min="1" max="99" data-s="${s}" aria-label="${SHAPE_NAME[s]}多重"> g</label>`).join('');
+  el.querySelectorAll('input').forEach(inp=>inp.addEventListener('input', ()=>{ inp.classList.remove('right','wrong'); draw(n); }));
+  el.querySelector('.stage').classList.remove('showEq');
+  setMsg(n,'');
+  draw(n);
+}
+
+function guesses(n){
+  const v={}; let full=true;
+  document.querySelectorAll(`#task${n} .ans input`).forEach(i=>{ const x=parseInt(i.value,10); if(Number.isFinite(x)) v[i.dataset.s]=x; else full=false; });
+  return {v, full};
+}
+
+function draw(n){
+  const {p} = tasks[n], {v, full} = guesses(n);
+  document.querySelector(`#task${n} .stage`).innerHTML = p.ms.map((m,i)=>{
+    let tilt=0, cls='', st='天平 '+(i+1);
+    if(full){ const d=wOf(m[0],v)-wOf(m[1],v);
+      tilt = d>0? -1 : d<0? 1 : 0;
+      cls = d? 'bad':'ok'; st = d>0? '左邊太重' : d<0? '右邊太重' : '平衡 ✔'; }
+    return `<div class="mob ${cls}">${mobileSVG(m,tilt)}<div class="st">${st}</div><div class="eq">${eqText(m)}</div></div>`;
+  }).join('');
+}
+
+function setMsg(n, html, cls=''){ const m=document.querySelector(`#task${n} .msg`); m.className='msg '+cls; m.innerHTML=html; }
+
+function check(n){
+  const t=tasks[n], {v, full}=guesses(n);
+  if(!full){ setMsg(n,'每種藥錠都要填重量喔！','tip'); return; }
+  let allRight=true;
+  document.querySelectorAll(`#task${n} .ans input`).forEach(i=>{
+    const ok = v[i.dataset.s]===t.p.v[i.dataset.s]; allRight = allRight && ok;
+    if(!i.readOnly){ i.classList.toggle('right',ok); i.classList.toggle('wrong',!ok); }
+  });
+  if(allRight){ t.done=true; setMsg(n,`✔ 任務 ${n} 過關！`,'win'); }
+  else setMsg(n,'紅色的重量不對，看歪掉的天平再想想！','bad');
+}
+
+function hint(n){
+  const t=tasks[n], el=document.getElementById('task'+n);
+  if(t.hintLv===0){
+    el.querySelector('.stage').classList.add('showEq'); t.hintLv=1;
+    setMsg(n,'💡 天平下面寫出算式了，從最短的那個算式開始換。','tip'); return;
+  }
+  const inp=[...el.querySelectorAll('.ans input')].find(i=>!i.readOnly && parseInt(i.value,10)!==t.p.v[i.dataset.s]);
+  if(!inp){ setMsg(n,'💡 已經都對了，按「✔ 檢查」！','tip'); return; }
+  inp.value=t.p.v[inp.dataset.s]; inp.readOnly=true; inp.classList.remove('right','wrong');
+  draw(n); setMsg(n,`💡 幫你填好 ${icon(inp.dataset.s)} ＝ ${inp.value} g，剩下自己算！`,'tip');
+}
+
+function show(n){
+  const t=tasks[n];
+  document.querySelectorAll(`#task${n} .ans input`).forEach(i=>{ i.value=t.p.v[i.dataset.s]; i.classList.remove('right','wrong'); });
+  document.querySelector(`#task${n} .stage`).classList.add('showEq');
+  draw(n); setMsg(n,'👀 這是答案，按「🔄 換一題」再挑戰一次。','tip');
+}
+
+/* ---------- 5. 5 題測驗 ---------- */
+const QUIZ = [
+  { q:'○＝2 g，▢ 是多少 g？', ms:[[['C'],['O','O','O']]], opts:['3 g','5 g','6 g','8 g'], a:2,
+    why:'▢＝○＋○＋○＝2＋2＋2＝6' },
+  { q:'兩個天平都平衡，○ 是多少 g？', ms:[[['C'],['O']],[['C','O'],[10]]], opts:['2 g','4 g','5 g','10 g'], a:2,
+    why:'▢＝○，所以 ○＋○＝10，○＝5' },
+  { q:'這個天平可以寫成哪個算式？', ms:[[['C','C'],['O',4]]], wide:true,
+    opts:['▢＋▢＝○＋4','▢＋▢＋○＝4','▢＋▢＋4＝○','▢＝○＋4'], a:0, why:'左邊兩個方塊＝右邊一個圓加 4' },
+  { q:'比一比兩個天平，○ 是多少 g？', ms:[[['C','O'],[9]],[['C','O','O'],[13]]], opts:['4 g','5 g','9 g','13 g'], a:0,
+    why:'右邊多一個 ○，重量多 13－9＝4' },
+  { q:'兩個天平都平衡，▢ 是多少 g？', ms:[[['C'],['O','O']],[['C','O'],[12]]], opts:['4 g','6 g','8 g','12 g'], a:2,
+    why:'▢ 換成 ○＋○ → 3 個 ○＝12，○＝4，▢＝8' },
+];
+let quizScore=0;
+function renderQuiz(){
+  quizScore=0; document.getElementById('score').textContent='得分 0 / 5';
+  document.getElementById('quiz').innerHTML = QUIZ.map((q,i)=>`
+    <div class="q" data-i="${i}">
+      <div class="qt">第 ${i+1} 題：${withIcons(q.q)}</div>
+      <div class="stage">${q.ms.map(m=>`<div class="mob">${mobileSVG(m,0)}</div>`).join('')}</div>
+      <div class="opts ${q.wide?'wide':''}">${q.opts.map((o,j)=>`<button type="button" data-j="${j}">${o}</button>`).join('')}</div>
+      <div class="fb" aria-live="polite"></div>
+    </div>`).join('');
+}
+document.getElementById('quiz').addEventListener('click', e=>{
+  const b=e.target.closest('.opts button'); if(!b||b.disabled) return;
+  const box=b.closest('.q'), q=QUIZ[box.dataset.i], j=+b.dataset.j, btns=box.querySelectorAll('.opts button');
+  btns.forEach(x=>x.disabled=true);
+  btns[q.a].classList.add('right');
+  const fb=box.querySelector('.fb');
+  if(j===q.a){ quizScore++; fb.className='fb ok'; fb.innerHTML='✔ 答對了！'+withIcons(q.why); }
+  else { b.classList.add('wrong'); fb.className='fb bad'; fb.innerHTML='✘ 正確答案是綠色那個：'+withIcons(q.why); }
+  document.getElementById('score').textContent=`得分 ${quizScore} / 5`;
+});
+document.getElementById('quizReset').addEventListener('click', renderQuiz);
+
+/* ---------- 6. 啟動 ---------- */
+const withIcons = s => s.replace(/[▢○]/g, c=>icon(c==='▢'?'C':'O'));
+const rules = document.querySelector('.rules'); rules.innerHTML = withIcons(rules.innerHTML);
+document.getElementById('bigBtn').addEventListener('click', ()=>document.body.classList.toggle('big'));
+[1,2,3].forEach(buildTask);
+renderQuiz();
+</script>
+<!-- ══ QR Code 懸浮元件 ══ -->
+<style>
+  #qr-fab { position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 9999; display: flex; flex-direction: column; align-items: flex-end; gap: 0.6rem; font-family: 'Noto Sans TC', sans-serif; }
+  #qr-panel { background: #1a2035; border: 1px solid #2a3350; border-radius: 16px; padding: 1.4rem 1.4rem 1rem; text-align: center; box-shadow: 0 8px 40px rgba(0,0,0,0.5); display: none; flex-direction: column; align-items: center; gap: 0.7rem; min-width: 190px; animation: qrFadeIn 0.2s ease; }
+  #qr-panel.open { display: flex; }
+  @keyframes qrFadeIn { from { opacity:0; transform: translateY(10px) scale(0.96); } to { opacity:1; transform: translateY(0) scale(1); } }
+  #qr-panel-title { font-size: 0.82rem; font-weight: 600; color: #e8eaf2; line-height: 1.4; max-width: 170px; }
+  #qr-panel img { width: 160px; height: 160px; background: #fff; border-radius: 10px; padding: 6px; display: block; }
+  #qr-panel-url { font-size: 0.58rem; color: #7a8099; word-break: break-all; max-width: 170px; line-height: 1.4; font-family: monospace; }
+  #qr-panel-close { font-size: 0.72rem; color: #7a8099; background: none; border: 1px solid #2a3350; border-radius: 100px; padding: 0.2rem 0.8rem; cursor: pointer; transition: color 0.15s; }
+  #qr-panel-close:hover { color: #e8eaf2; }
+  #qr-toggle-btn { width: 48px; height: 48px; border-radius: 50%; background: linear-gradient(135deg, #00c9a7, #7c6ded); border: none; font-size: 1.4rem; cursor: pointer; box-shadow: 0 4px 20px rgba(0,201,167,0.4); transition: transform 0.2s, box-shadow 0.2s; display: flex; align-items: center; justify-content: center; }
+  #qr-toggle-btn:hover { transform: scale(1.1); box-shadow: 0 6px 28px rgba(0,201,167,0.6); }
+</style>
+<div id="qr-fab">
+  <div id="qr-panel">
+    <div id="qr-panel-title">秤人之危：天平代入消去</div>
+    <img src="https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=https%3A%2F%2Fcwmps.github.io%2Fmath%2Fequations%2Fbalance-mobiles.html" alt="QR Code" loading="lazy"/>
+    <div id="qr-panel-url">https://cwmps.github.io/math/equations/balance-mobiles.html</div>
+    <button id="qr-panel-close" onclick="toggleQR()">關閉</button>
+  </div>
+  <button id="qr-toggle-btn" onclick="toggleQR()" title="掃描 QR Code">📱</button>
+</div>
+<script>
+  function toggleQR() { document.getElementById('qr-panel').classList.toggle('open'); }
+  document.addEventListener('click', function(e) {
+    const fab = document.getElementById('qr-fab');
+    if (fab && !fab.contains(e.target)) document.getElementById('qr-panel').classList.remove('open');
+  });
+</script>
+</body>
+</html>
