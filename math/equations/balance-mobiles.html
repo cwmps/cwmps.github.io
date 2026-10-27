@@ -153,7 +153,7 @@
     <div class="body">
       <div id="quiz"></div>
       <div class="score" id="score">得分 0 / 5</div>
-      <div class="btns"><button type="button" id="quizReset">🔄 重新作答</button></div>
+      <div class="btns"><button type="button" id="quizReset">🔄 換一組題目</button></div>
     </div>
   </section>
 </main>
@@ -225,38 +225,64 @@ const S=(chain,v)=>[chain,[wOf(chain,v)]];   // 一邊是藥錠、另一邊是�
 /* ---------- 3. 三個任務的出題規則 ---------- */
 const MAKERS = {
   1: [ // 代入：一個「換算」吊飾＋一個「總重」吊飾
-    ()=>{ const O=rnd(2,9), k=pick([2,3]), v={C:k*O,O}; return {v, ms:[[['C'],rep('O',k)], S(['C','O'],v)]}; },
-    ()=>{ const O=rnd(2,9), d=rnd(1,6), v={C:O+d,O}; return {v, ms:[[['C'],['O',d]], S(['C','O'],v)]}; },
-    ()=>{ const C=rnd(2,8), v={C,O:2*C}; return {v, ms:[[['C','C'],['O']], S(['C','O'],v)]}; },
+    ()=>{ const O=rnd(2,9), k=pick([2,3]), v={C:k*O,O}; return {v, ms:[[['C'],rep('O',k)], S(pick([['C','O'],['C','O','O'],['C','C','O']]),v)]}; },
+    ()=>{ const O=rnd(2,9), d=rnd(1,6), v={C:O+d,O}; return {v, ms:[[['C'],['O',d]], S(pick([['C','O'],['C','C','O'],['C','O','O']]),v)]}; },
+    ()=>{ const C=rnd(2,6), k=pick([2,3]), v={C,O:k*C}; return {v, ms:[[rep('C',k),['O']], S(pick([['C','O'],['C','C','O'],['C','O','O']]),v)]}; },
     ()=>{ const O=rnd(3,9), d=rnd(1,5), v={C:2*O-d,O}; return {v, ms:[[['C',d],['O','O']], S(['O','O','C'],v)]}; },
+    ()=>{ const O=rnd(2,6), d=rnd(1,6), v={C:2*O+d,O}; return {v, ms:[[['C'],['O','O',d]], S(pick([['C','O'],['C','O','O']]),v)]}; },
+    ()=>{ const C=rnd(2,8), d=rnd(1,6), v={C,O:C+d}; return {v, ms:[[['O'],['C',d]], S(pick([['C','O'],['C','C','O'],['C','O','O']]),v)]}; },
   ],
-  2: [ // 消去：兩個總重吊飾，只差一顆
+  2: [ // 消去：兩個總重吊飾，差一顆或兩顆
     ()=>{ const v={C:rnd(2,12),O:rnd(2,12)}, a=rnd(1,2), b=rnd(1,2);
       const base=[...rep('C',a),...rep('O',b)], more=pick(['C','O']);
-      const two=more==='C'? ['C',...base] : [...base,'O'];
-      const ms=[S(base,v),S(two,v)]; if(Math.random()<.5) ms.reverse(); return {v, ms}; },
+      return {v, ms:[S(base,v),S([...base,more],v)]}; },
+    ()=>{ const v={C:rnd(2,12),O:rnd(2,12)}, a=rnd(1,2), b=rnd(1,2);
+      const base=[...rep('C',a),...rep('O',b)], more=pick(['C','O']);
+      return {v, ms:[S(base,v),S([...base,more,more],v)]}; },
+    ()=>{ const v={C:rnd(2,12),O:rnd(2,12)}, d=rnd(1,9), more=pick(['C','O']);
+      return {v, ms:[S(['C','O',d],v), S(['C','O',d,more],v)]}; },
   ],
-  3: [ // 挑戰：三種藥錠，或兩邊都有砝碼
+  3: [ // 挑戰：三種藥錠，或兩邊都有藥錠
     ()=>{ const T=rnd(1,4), k1=pick([2,3]), k2=pick([2,3]), v={T,O:k2*T,C:k1*k2*T};
       return {v, ms:[[['C'],rep('O',k1)], [['O'],rep('T',k2)], S(['C','O','T'],v)]}; },
     ()=>{ const T=rnd(2,5), d=rnd(1,4), v={C:2*T,O:T+d,T};
       return {v, ms:[[['C'],['T','T']], [['O'],['T',d]], S(['C','O','O','T'],v)]}; },
     ()=>{ const v={C:rnd(2,12),O:rnd(2,12),T:rnd(2,12)};
       return {v, ms:[S(['C','O'],v), S(['O','T'],v), S(['C','T'],v)]}; },
+    ()=>{ const T=rnd(1,3), v={C:2*T,O:3*T,T};
+      return {v, ms:[[['C','C','C'],['O','O']], [['O'],['T','T','T']], S(['C','O','T'],v)]}; },
+    ()=>{ const T=rnd(2,5), d=rnd(1,4), v={T,O:T+d,C:2*T+2*d};
+      return {v, ms:[[['C','T'],['O','O',d]], [['O'],['T',d]], S(['C','O','T'],v)]}; },
     ()=>{ const v={C:rnd(3,10),O:rnd(3,10)}, d=3*v.O-2*v.C, e=2*v.O-v.C;
       return {v, ms:[[['C','C',d],['O','O','O']], [['O','O'],['C',e]]]}; },
+    ()=>{ const O=rnd(2,9), d=rnd(1,5), v={O,C:O+d};
+      return {v, ms:[[['C','O'],['O','O',d]], [['C','C'],['O',2*v.C-O]]]}; },
+    ()=>{ const C=rnd(2,6), d=rnd(1,5), v={C,O:3*C-d};
+      return {v, ms:[[['C','C','C'],['O',d]], S(['C','O','O'],v)]}; },
   ],
 };
 const TASK_INFO = {
-  1:{ title:'任務 1　代入', code:'Rx-01', warn:'先看沒有總重的天平：誰可以換成誰？' },
-  2:{ title:'任務 2　消去', code:'Rx-02', warn:'兩個吊飾比一比，多出哪一顆？' },
-  3:{ title:'任務 3　挑戰', code:'Rx-03', warn:'三種藥錠或兩邊都有砝碼，一步一步換' },
+  1:{ title:'任務 1　代入', warn:'先看沒有總重的天平：誰可以換成誰？' },
+  2:{ title:'任務 2　消去', warn:'兩個吊飾比一比，多出哪幾顆？' },
+  3:{ title:'任務 3　挑戰', warn:'三種藥錠或兩邊都有藥錠，一步一步換' },
 };
 
-// 出一題並檢查：正整數、各藥錠不同重、解唯一、砝碼 1~60、每串最多 5 個
+// 讓同一種題型長得不一樣：藥錠互換、左右對調、吊飾順序與一串裡的順序打亂
+function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+function vary(p){
+  const sh=shapesOf(p.ms), to=shuffle([...sh]), map={}; sh.forEach((s,i)=>map[s]=to[i]);
+  const ren=c=>c.map(x=>typeof x==='string'? map[x] : x);
+  const order=c=>[...shuffle(c.filter(x=>typeof x==='string')), ...c.filter(x=>typeof x==='number')];
+  const ms=shuffle(p.ms.map(([L,R])=>{ const m=[order(ren(L)),order(ren(R))]; return Math.random()<.3? [m[1],m[0]] : m; }));
+  const v={}; sh.forEach(s=>v[map[s]]=p.v[s]);
+  return {v, ms};
+}
+
+// 出一題並檢查：正整數、各藥錠不同重、解唯一、砝碼 1~60、每串最多 5 個、跟上一題不一樣
+const lastKey = {};
 function makePuzzle(n){
   for(let tries=0; tries<500; tries++){
-    const p = pick(MAKERS[n])();
+    const p = vary(pick(MAKERS[n])());
     const vals = Object.values(p.v);
     if(vals.some(x=>!Number.isInteger(x)||x<1||x>30)) continue;
     if(new Set(vals).size!==vals.length) continue;
@@ -266,17 +292,18 @@ function makePuzzle(n){
     const sol = solve(p.ms); if(!sol) continue;
     if(Object.keys(p.v).some(k=>Math.abs(sol[k]-p.v[k])>1e-9)) continue;
     if(p.ms.some(m=>wOf(m[0],p.v)!==wOf(m[1],p.v))) continue;
-    return p;
+    const key=JSON.stringify(p.ms); if(key===lastKey[n]) continue;
+    lastKey[n]=key; return p;
   }
   throw new Error('出題失敗');
 }
 
 /* ---------- 4. 任務畫面 ---------- */
-const tasks = {};
+const tasks = {}, passed = {1:0,2:0,3:0};
 function buildTask(n){
   const el = document.getElementById('task'+n), info = TASK_INFO[n];
   el.innerHTML = `
-    <div class="head"><h2>${info.title}</h2><span class="code">${info.code}</span><span class="barcode"></span></div>
+    <div class="head"><h2>${info.title}</h2><span class="code">已過 <b class="cnt">0</b> 題</span><span class="barcode"></span></div>
     <div class="warn">⚠ ${info.warn}</div>
     <div class="body">
       <div class="stage"></div>
@@ -335,7 +362,10 @@ function check(n){
     const ok = v[i.dataset.s]===t.p.v[i.dataset.s]; allRight = allRight && ok;
     if(!i.readOnly){ i.classList.toggle('right',ok); i.classList.toggle('wrong',!ok); }
   });
-  if(allRight){ t.done=true; setMsg(n,`✔ 任務 ${n} 過關！`,'win'); }
+  if(allRight){
+    if(!t.done){ passed[n]++; document.querySelector(`#task${n} .cnt`).textContent=passed[n]; }
+    t.done=true; setMsg(n,`✔ 任務 ${n} 過關！按「🔄 換一題」繼續挑戰`,'win');
+  }
   else setMsg(n,'紅色的重量不對，看歪掉的天平再想想！','bad');
 }
 
@@ -355,30 +385,47 @@ function show(n){
   const t=tasks[n];
   document.querySelectorAll(`#task${n} .ans input`).forEach(i=>{ i.value=t.p.v[i.dataset.s]; i.classList.remove('right','wrong'); });
   document.querySelector(`#task${n} .stage`).classList.add('showEq');
-  draw(n); setMsg(n,'👀 這是答案，按「🔄 換一題」再挑戰一次。','tip');
+  t.done=true; draw(n); setMsg(n,'👀 這是答案（不算過關），按「🔄 換一題」再挑戰一次。','tip');
 }
 
-/* ---------- 5. 5 題測驗 ---------- */
-const QUIZ = [
-  { q:'○＝2 g，▢ 是多少 g？', ms:[[['C'],['O','O','O']]], opts:['3 g','5 g','6 g','8 g'], a:2,
-    why:'▢＝○＋○＋○＝2＋2＋2＝6' },
-  { q:'兩個天平都平衡，○ 是多少 g？', ms:[[['C'],['O']],[['C','O'],[10]]], opts:['2 g','4 g','5 g','10 g'], a:2,
-    why:'▢＝○，所以 ○＋○＝10，○＝5' },
-  { q:'這個天平可以寫成哪個算式？', ms:[[['C','C'],['O',4]]], wide:true,
-    opts:['▢＋▢＝○＋4','▢＋▢＋○＝4','▢＋▢＋4＝○','▢＝○＋4'], a:0, why:'左邊兩個方塊＝右邊一個圓加 4' },
-  { q:'比一比兩個天平，○ 是多少 g？', ms:[[['C','O'],[9]],[['C','O','O'],[13]]], opts:['4 g','5 g','9 g','13 g'], a:0,
-    why:'右邊多一個 ○，重量多 13－9＝4' },
-  { q:'兩個天平都平衡，▢ 是多少 g？', ms:[[['C'],['O','O']],[['C','O'],[12]]], opts:['4 g','6 g','8 g','12 g'], a:2,
-    why:'▢ 換成 ○＋○ → 3 個 ○＝12，○＝4，▢＝8' },
+/* ---------- 5. 5 題測驗（每次重新出題） ---------- */
+const txt=c=>c.map(x=>typeof x==='string'? ({C:'▢',O:'○',T:'△'})[x] : x).join('＋');
+// 正確答案＋干擾選項，湊滿 4 個不同的正整數後打亂
+function numOpts(ans, wrongs){
+  const set=new Set([ans]);
+  for(const w of wrongs) if(w>0 && set.size<4) set.add(w);
+  while(set.size<4){ const w=ans+rnd(-4,6); if(w>0) set.add(w); }
+  const opts=shuffle([...set]);
+  return { opts:opts.map(x=>x+' g'), a:opts.indexOf(ans) };
+}
+const QUIZ_MAKERS = [
+  ()=>{ const O=rnd(2,6), k=pick([2,3]);
+    return { q:`○＝${O} g，▢ 是多少 g？`, ms:[[['C'],rep('O',k)]], ...numOpts(k*O,[O+k,(k+1)*O,k*O-1]),
+      why:`▢＝${k} 個 ○＝${rep(O,k).join('＋')}＝${k*O}` }; },
+  ()=>{ const x=rnd(3,9);
+    return { q:'兩個天平都平衡，○ 是多少 g？', ms:[[['C'],['O']],[['C','O'],[2*x]]], ...numOpts(x,[2*x,x+2,x-1]),
+      why:`▢＝○，所以 ○＋○＝${2*x}，○＝${x}` }; },
+  ()=>{ const a=pick([2,3]), d=rnd(2,9), L=rep('C',a), R=['O',d];
+    const right=`${txt(L)}＝${txt(R)}`;
+    const opts=shuffle([right, `${txt(L)}＋○＝${d}`, `${txt(L)}＋${d}＝○`, `▢＝○＋${d}`]);
+    return { q:'這個天平可以寫成哪個算式？', ms:[[L,R]], opts, a:opts.indexOf(right), wide:true,
+      why:`左邊 ${a} 個 ▢＝右邊 ○ 加 ${d}` }; },
+  ()=>{ const C=rnd(2,9), O=rnd(2,9), t1=C+O, t2=C+2*O;
+    return { q:'比一比兩個天平，○ 是多少 g？', ms:[[['C','O'],[t1]],[['C','O','O'],[t2]]], ...numOpts(O,[t2,t1,C]),
+      why:`右邊多一個 ○，重量多 ${t2}－${t1}＝${O}` }; },
+  ()=>{ const O=rnd(2,6), k=pick([2,3]), C=k*O;
+    return { q:'兩個天平都平衡，▢ 是多少 g？', ms:[[['C'],rep('O',k)],[['C','O'],[C+O]]], ...numOpts(C,[O,C+O,C+1]),
+      why:`▢ 換成 ${k} 個 ○ → ${k+1} 個 ○＝${C+O}，○＝${O}，▢＝${C}` }; },
 ];
-let quizScore=0;
+let QUIZ=[], quizScore=0;
 function renderQuiz(){
+  QUIZ = QUIZ_MAKERS.map(f=>f());
   quizScore=0; document.getElementById('score').textContent='得分 0 / 5';
   document.getElementById('quiz').innerHTML = QUIZ.map((q,i)=>`
     <div class="q" data-i="${i}">
       <div class="qt">第 ${i+1} 題：${withIcons(q.q)}</div>
       <div class="stage">${q.ms.map(m=>`<div class="mob">${mobileSVG(m,0)}</div>`).join('')}</div>
-      <div class="opts ${q.wide?'wide':''}">${q.opts.map((o,j)=>`<button type="button" data-j="${j}">${o}</button>`).join('')}</div>
+      <div class="opts ${q.wide?'wide':''}">${q.opts.map((o,j)=>`<button type="button" data-j="${j}">${withIcons(o)}</button>`).join('')}</div>
       <div class="fb" aria-live="polite"></div>
     </div>`).join('');
 }
@@ -395,7 +442,7 @@ document.getElementById('quiz').addEventListener('click', e=>{
 document.getElementById('quizReset').addEventListener('click', renderQuiz);
 
 /* ---------- 6. 啟動 ---------- */
-const withIcons = s => s.replace(/[▢○]/g, c=>icon(c==='▢'?'C':'O'));
+const withIcons = s => s.replace(/[▢○△]/g, c=>icon({'▢':'C','○':'O','△':'T'}[c]));
 const rules = document.querySelector('.rules'); rules.innerHTML = withIcons(rules.innerHTML);
 document.getElementById('bigBtn').addEventListener('click', ()=>document.body.classList.toggle('big'));
 [1,2,3].forEach(buildTask);
